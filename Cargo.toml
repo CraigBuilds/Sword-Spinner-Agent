@@ -1,0 +1,68 @@
+[package]
+name = "sword-spinner"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "A top-down arcade game with physics-based sword spinning"
+
+[dependencies]
+bevy = { version = "0.15", default-features = false, features = [
+    "bevy_asset",
+    "bevy_sprite",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_winit",
+    "bevy_state",
+    "bevy_color",
+    "multi_threaded",
+] }
+avian2d = "0.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+bevy = { version = "0.15", default-features = false, features = ["x11"] }
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+
+# Android-specific metadata
+[package.metadata.android]
+package = "com.swordspinner.game"
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
+
+[package.metadata.android.sdk]
+min_sdk_version = 31
+target_sdk_version = 34
+max_sdk_version = 34
+
+[[package.metadata.android.permission]]
+name = "android.permission.WAKE_LOCK"
+
+[package.metadata.android.application]
+label = "Sword Spinner"
+icon = "@mipmap/ic_launcher"
+theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
+debuggable = false
+has_code = false
+
+[[package.metadata.android.application.activity]]
+name = "android.app.NativeActivity"
+label = "Sword Spinner"
+config_changes = "orientation|keyboardHidden|screenSize"
+launch_mode = "singleTask"
+orientation = "landscape"
+
+[[package.metadata.android.application.activity.intent_filter]]
+actions = ["android.intent.action.MAIN"]
+categories = ["android.intent.category.LAUNCHER"]
+
+[[package.metadata.android.application.activity.meta_data]]
+name = "android.app.lib_name"
+value = "sword_spinner"

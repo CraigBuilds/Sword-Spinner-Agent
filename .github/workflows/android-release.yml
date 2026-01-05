@@ -1,0 +1,118 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Add Android targets
+      run: |
+        rustup target add aarch64-linux-android
+        rustup target add armv7-linux-androideabi
+        rustup target add x86_64-linux-android
+
+    - name: Install cargo-apk
+      run: cargo install cargo-apk
+
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+
+    - name: Cache cargo index
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-git-
+
+    - name: Cache target directory
+      uses: actions/cache@v4
+      with:
+        path: target
+        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-target-
+
+    - name: Build release APK
+      run: cargo apk build --release --target aarch64-linux-android
+
+    - name: Sign APK (on tag push)
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        # Decode keystore from base64
+        echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.jks
+        
+        # Find the unsigned APK
+        APK_PATH=$(find target/release/apk -name "*.apk" | head -n 1)
+        
+        # Sign the APK
+        $ANDROID_HOME/build-tools/*/apksigner sign \
+          --ks release.jks \
+          --ks-pass pass:$KEYSTORE_PASSWORD \
+          --key-pass pass:$KEY_PASSWORD \
+          --ks-key-alias $KEY_ALIAS \
+          --out target/release/apk/sword-spinner-signed.apk \
+          $APK_PATH
+        
+        # Verify the signature
+        $ANDROID_HOME/build-tools/*/apksigner verify target/release/apk/sword-spinner-signed.apk
+        
+        # Clean up keystore
+        rm release.jks
+
+    - name: Upload unsigned APK
+      if: "!startsWith(github.ref, 'refs/tags/')"
+      uses: actions/upload-artifact@v4
+      with:
+        name: sword-spinner-unsigned
+        path: target/release/apk/*.apk
+
+    - name: Upload signed APK
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: actions/upload-artifact@v4
+      with:
+        name: sword-spinner-signed
+        path: target/release/apk/sword-spinner-signed.apk
+
+    - name: Create GitHub Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: target/release/apk/sword-spinner-signed.apk
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -8,7 +8,7 @@ description = "A top-down arcade game with physics-based sword spinning"
 [lib]
 crate-type = ["cdylib"]
 name = "sword_spinner"
-path = "src/main.rs"
+path = "src/lib.rs"
 
 [dependencies]
 bevy = { version = "0.15", default-features = false, features = [
@@ -46,3 +46,7 @@ strip = true
 package = "com.swordspinner.game"
 build_targets = ["aarch64-linux-android"]
 target_sdk_version = 34
+
+[package.metadata.android.signing.release]
+path = "/tmp/my-release-key.keystore"
+keystore_password = "android"

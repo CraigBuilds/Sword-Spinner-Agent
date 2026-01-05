@@ -62,6 +62,15 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-target-
 
+    - name: Create platform symlink
+      run: |
+        # cargo-apk looks for platform-30 but CI has platform-34
+        # Create symlink from android-34 to android-30 as workaround
+        cd $ANDROID_HOME/platforms
+        if [ -d android-34 ] && [ ! -d android-30 ]; then
+          ln -s android-34 android-30
+        fi
+
     - name: Build release APK
       run: cargo apk build --lib --release --target aarch64-linux-android
 

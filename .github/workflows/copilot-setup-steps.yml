@@ -1,0 +1,29 @@
+name: "Copilot Setup Steps"
+on:
+  workflow_dispatch:
+  push:
+    paths: [ .github/workflows/copilot-setup-steps.yml ]
+  pull_request:
+    paths: [ .github/workflows/copilot-setup-steps.yml ]
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain (incl. rustfmt + clippy)
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore Rust/Cargo build caches
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: bevy
+          cache-on-failure: true
+
+      - name: Fetch dependencies
+        run: cargo fetch

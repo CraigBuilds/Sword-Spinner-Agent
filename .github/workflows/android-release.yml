@@ -63,7 +63,7 @@ jobs:
           ${{ runner.os }}-target-
 
     - name: Build release APK
-      run: cargo apk build --release --target aarch64-linux-android
+      run: cargo apk build --lib --release --target aarch64-linux-android
 
     - name: Sign APK (on tag push)
       if: startsWith(github.ref, 'refs/tags/')

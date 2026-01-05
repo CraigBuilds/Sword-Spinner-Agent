@@ -66,9 +66,13 @@ jobs:
       run: |
         # cargo-apk looks for platform-30 but CI has platform-34
         # Create symlink from android-34 to android-30 as workaround
-        cd $ANDROID_HOME/platforms
-        if [ -d android-34 ] && [ ! -d android-30 ]; then
-          ln -s android-34 android-30
+        if [ -d "$ANDROID_HOME/platforms/android-34" ] && [ ! -d "$ANDROID_HOME/platforms/android-30" ]; then
+          ln -s "$ANDROID_HOME/platforms/android-34" "$ANDROID_HOME/platforms/android-30"
+          echo "Created symlink from android-34 to android-30"
+        elif [ -d "$ANDROID_HOME/platforms/android-30" ]; then
+          echo "android-30 already exists"
+        else
+          echo "Warning: android-34 platform not found in $ANDROID_HOME/platforms"
         fi
 
     - name: Build release APK

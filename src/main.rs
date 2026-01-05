@@ -318,6 +318,8 @@ fn player_movement(
     if direction.length() > 0.0 {
         direction = direction.normalize();
         velocity.0 = direction * 200.0; // Movement speed
+    } else {
+        velocity.0 = Vec2::ZERO;
     }
 }
 

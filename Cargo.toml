@@ -33,36 +33,8 @@ codegen-units = 1
 strip = true
 
 # Android-specific metadata
+# Using AndroidManifest.xml for configuration
 [package.metadata.android]
 package = "com.swordspinner.game"
-build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
-
-[package.metadata.android.sdk]
-min_sdk_version = 31
+build_targets = ["aarch64-linux-android"]
 target_sdk_version = 34
-max_sdk_version = 34
-
-[[package.metadata.android.permission]]
-name = "android.permission.WAKE_LOCK"
-
-[package.metadata.android.application]
-label = "Sword Spinner"
-icon = "@mipmap/ic_launcher"
-theme = "@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
-debuggable = false
-has_code = false
-
-[[package.metadata.android.application.activity]]
-name = "android.app.NativeActivity"
-label = "Sword Spinner"
-config_changes = "orientation|keyboardHidden|screenSize"
-launch_mode = "singleTask"
-orientation = "landscape"
-
-[[package.metadata.android.application.activity.intent_filter]]
-actions = ["android.intent.action.MAIN"]
-categories = ["android.intent.category.LAUNCHER"]
-
-[[package.metadata.android.application.activity.meta_data]]
-name = "android.app.lib_name"
-value = "sword_spinner"

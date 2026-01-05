@@ -5,6 +5,11 @@ edition = "2021"
 license = "MIT"
 description = "A top-down arcade game with physics-based sword spinning"
 
+[lib]
+crate-type = ["cdylib"]
+name = "sword_spinner"
+path = "src/main.rs"
+
 [dependencies]
 bevy = { version = "0.15", default-features = false, features = [
     "bevy_asset",
@@ -17,6 +22,9 @@ bevy = { version = "0.15", default-features = false, features = [
     "multi_threaded",
 ] }
 avian2d = "0.2"
+
+[target.'cfg(target_os = "android")'.dependencies]
+android-activity = { version = "0.6", features = ["native-activity"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
 bevy = { version = "0.15", default-features = false, features = ["x11"] }

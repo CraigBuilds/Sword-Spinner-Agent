@@ -64,6 +64,7 @@ jobs:
 
     - name: Create platform symlink
       run: |
+        # Fix for "Platform '30' is not installed" error (see PR #6 Attempt 3)
         # cargo-apk looks for platform-30 but CI has platform-34
         # Create symlink from android-34 to android-30 as workaround
         if [ -d "$ANDROID_HOME/platforms/android-34" ] && [ ! -d "$ANDROID_HOME/platforms/android-30" ]; then

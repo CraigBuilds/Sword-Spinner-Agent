@@ -25,7 +25,8 @@ local.properties
 build/
 captures/
 *.jks
-*.keystore
+# Allow my-release-key.keystore for demo purposes only
+# *.keystore
 
 # Temporary
 /tmp/

@@ -79,22 +79,24 @@ jobs:
     - name: Build release APK
       run: cargo apk build --lib --release --target aarch64-linux-android
 
-    - name: Find unsigned APK
+    - name: Find signed APK
       id: find-apk
       run: |
-        # Find the unsigned APK
-        APK_PATH=$(find target/release/apk -name "*.apk" | head -n 1)
+        # Find the signed APK (cargo-apk creates both *-unaligned.apk and signed *.apk)
+        # We want the signed version without the -unaligned suffix
+        APK_PATH=$(find target/release/apk -name "*.apk" ! -name "*-unaligned.apk" | head -n 1)
         if [ -z "$APK_PATH" ]; then
-          echo "Error: No APK file found in target/release/apk"
+          echo "Error: No signed APK file found in target/release/apk"
+          ls -la target/release/apk/
           exit 1
         fi
         echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-        echo "Found APK at: $APK_PATH"
+        echo "Found signed APK at: $APK_PATH"
 
-    - name: Upload unsigned APK
+    - name: Upload signed APK
       uses: actions/upload-artifact@v4
       with:
-        name: sword-spinner-unsigned
+        name: sword-spinner-signed
         path: ${{ steps.find-apk.outputs.apk_path }}
 
     - name: Create GitHub Release

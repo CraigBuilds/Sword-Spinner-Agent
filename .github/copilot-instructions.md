@@ -24,6 +24,41 @@ Sword Spinner is a top-down arcade game built with:
 - Add comments only for complex physics calculations or non-obvious logic
 - Keep functions focused and single-purpose
 
+## Development Workflow
+
+**IMPORTANT**: Always run quality checks during development to catch errors early.
+
+### Before Making Changes
+1. Run `cargo check` to verify the codebase compiles successfully
+2. Run `cargo clippy` to understand any existing linting issues
+3. Note any pre-existing issues so you don't fix unrelated problems
+
+### After Making Changes
+1. Run `cargo check` immediately after code changes to catch compilation errors
+2. Run `cargo clippy` to catch common mistakes and style issues
+3. Run `cargo fmt` to format your code consistently
+4. **Commit changes first** using report_progress with your initial implementation
+5. **Then fix** any clippy warnings related to your changes
+6. **Commit fixes** in a separate commit using report_progress
+
+### When to Run Checks
+- **Always** after editing Rust source files
+- **After** committing changes with report_progress (to verify committed changes compile and pass linting)
+- **After** adding new dependencies
+- **After** making architectural changes
+
+### Full Build Verification
+- Run a full build (`cargo build` or `cargo run`) only at the end of your work
+- Or when there's a specific reason to verify the complete build process
+- Full builds are slower than `cargo check`, so use them sparingly
+
+### Efficient Usage
+- Use `cargo check` for fast syntax validation (faster than full build)
+- Use `cargo clippy` for comprehensive linting
+- Use `cargo fmt` to auto-format code
+- Reserve full builds for final verification or when specifically needed
+- These checks are for local development only, not part of CI
+
 ## Build Commands
 
 ### Desktop
@@ -45,6 +80,12 @@ adb logcat | grep RustStdoutStderr          # View logs
 
 ## Testing
 
+### Quality Checks
+- **Always** run `cargo check` and `cargo clippy` before testing
+- Fix any compilation errors or clippy warnings related to your changes
+- Run `cargo fmt` to ensure consistent code style
+
+### Manual Testing
 - No automated test suite currently exists
 - Manual testing required for both platforms
 - For Android: Test touch controls on real devices, not just emulators

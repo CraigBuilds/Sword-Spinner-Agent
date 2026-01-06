@@ -29,21 +29,14 @@ Move around the arena and use your spinning sword to knock physics objects aroun
 - **Spin Sword**: Spacebar or Left Mouse Button
 
 #### Mobile (Android)
-- **Movement**: Touch and drag anywhere on screen - your character follows your finger
-- **Spin Sword**: Double-tap anywhere on screen (like Instagram likes!)
-  - Must tap twice within 300ms
-  - Taps must be within 50 pixels of each other
-  - Works from any screen position
-  - Won't trigger accidentally during dragging
-
-### Double-Tap Design
-The double-tap mechanic was chosen because:
-- ✅ Allows simultaneous movement and spinning (drag + tap)
-- ✅ Prevents accidental spins during normal gameplay
-- ✅ Feels intentional and satisfying (like a "power move")
-- ✅ Familiar gesture from social media apps
-- ✅ Works with one or two hands
-- ✅ Doesn't interfere with drag-to-move controls
+- **Movement**: Use the virtual joystick (appears anywhere you touch the screen)
+  - Touch and drag anywhere to move
+  - Floating joystick appears where you touch for intuitive control
+  - Visual feedback shows your input direction
+- **Spin Sword**: Tap the "SPIN" button at the bottom center of the screen
+  - Simple and reliable
+  - No accidental triggers
+  - Easy to use while moving with the joystick
 
 ## Building
 
@@ -112,7 +105,7 @@ The workflow can be triggered manually from the Actions tab:
 - **Engine**: Bevy 0.15 with ECS architecture
 - **Physics**: Avian2D for 2D rigid body physics
 - **Joint System**: RevoluteJoint connects sword to player
-- **Touch Handling**: Custom TouchState resource for gesture detection
+- **Touch Handling**: Bevy virtual_joystick for mobile controls with UI button for sword spinning
 
 ### Physics Configuration
 - Zero gravity (top-down game)
@@ -148,12 +141,10 @@ sword-spinner/
 
 To test touch controls on Android:
 
-1. **Single tap**: Should not spin sword (test for false positives)
-2. **Double-tap**: Tap twice quickly (~200ms apart) - should spin sword
-3. **Drag**: Touch and drag - character should follow smoothly
-4. **Drag + double-tap**: While dragging, double-tap with another finger - both should work
-5. **Distant taps**: Tap in different corners - should not trigger spin (>50px apart)
-6. **Triple-tap**: Three quick taps - should only spin once (on second tap)
+1. **Joystick movement**: Touch and drag anywhere on screen - character should follow smoothly
+2. **Spin button**: Tap the "SPIN" button at bottom center - sword should spin
+3. **Simultaneous controls**: Move with joystick while tapping spin button - both should work
+4. **Button visibility**: Ensure the spin button is clearly visible and accessible
 
 ## License
 
@@ -167,4 +158,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 - Built with [Bevy](https://bevyengine.org/) game engine
 - Physics powered by [Avian2D](https://github.com/Jondolf/avian)
+- Touch controls provided by [virtual_joystick](https://github.com/SergioRibera/virtual_joystick)
 - Inspired by classic top-down arcade games

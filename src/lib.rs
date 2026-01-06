@@ -1,6 +1,13 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use std::time::{Duration, Instant};
+use virtual_joystick::*;
+
+// ID for the virtual joystick
+#[derive(Default, Debug, Reflect, Hash, Clone, PartialEq, Eq)]
+enum JoystickId {
+    #[default]
+    Movement,
+}
 
 #[bevy_main]
 fn main() {
@@ -15,15 +22,15 @@ fn main() {
                 ..default()
             }),
             PhysicsPlugins::default(),
+            VirtualJoystickPlugin::<JoystickId>::default(),
         ))
         .insert_resource(Gravity(Vec2::ZERO)) // Top-down game, no gravity
-        .insert_resource(TouchState::default())
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
-                detect_double_tap,
                 player_movement,
+                spin_button_interaction,
                 sword_spin,
                 camera_follow,
             )
@@ -42,62 +49,8 @@ struct Sword;
 #[derive(Component)]
 struct MainCamera;
 
-// Touch state resource for double-tap detection
-#[derive(Resource)]
-struct TouchState {
-    last_tap_time: Option<Instant>,
-    last_tap_position: Option<Vec2>,
-    double_tap_detected: bool,
-    double_tap_window: Duration,
-    tap_distance_threshold: f32,
-    touch_start_position: Option<Vec2>,
-    is_dragging: bool,
-    current_touch_position: Option<Vec2>, // Track current touch for movement
-}
-
-impl Default for TouchState {
-    fn default() -> Self {
-        Self {
-            last_tap_time: None,
-            last_tap_position: None,
-            double_tap_detected: false,
-            double_tap_window: Duration::from_millis(300),
-            tap_distance_threshold: 50.0,
-            touch_start_position: None,
-            is_dragging: false,
-            current_touch_position: None,
-        }
-    }
-}
-
-impl TouchState {
-    fn register_tap(&mut self, position: Vec2) {
-        let now = Instant::now();
-        
-        // Check if this is a double-tap
-        if let (Some(last_time), Some(last_pos)) = (self.last_tap_time, self.last_tap_position) {
-            let time_diff = now.duration_since(last_time);
-            let distance = position.distance(last_pos);
-            
-            if time_diff <= self.double_tap_window && distance <= self.tap_distance_threshold {
-                self.double_tap_detected = true;
-                // Reset to prevent triple-tap
-                self.last_tap_time = None;
-                self.last_tap_position = None;
-                return;
-            }
-        }
-        
-        self.last_tap_time = Some(now);
-        self.last_tap_position = Some(position);
-    }
-    
-    fn consume_double_tap(&mut self) -> bool {
-        let detected = self.double_tap_detected;
-        self.double_tap_detected = false;
-        detected
-    }
-}
+#[derive(Component)]
+struct SpinButton;
 
 // Setup system - initializes the game world
 fn setup(mut commands: Commands) {
@@ -229,63 +182,81 @@ fn setup(mut commands: Commands) {
             Mass(1.0),
         ));
     }
+
+    // Spawn virtual joystick (floating type that appears where touched)
+    create_joystick(
+        &mut commands,
+        JoystickId::Movement,
+        Handle::default(), // No knob image
+        Handle::default(), // No background image
+        Some(Color::srgba(0.2, 0.4, 0.8, 0.8)), // Knob color (blue to match player)
+        Some(Color::srgba(0.3, 0.3, 0.3, 0.5)), // Background color (semi-transparent gray)
+        Some(Color::srgba(0.1, 0.1, 0.1, 0.3)), // Interactable area color
+        Vec2::new(75.0, 75.0),           // Knob size
+        Vec2::new(150.0, 150.0),         // Background size
+        Node {
+            width: Val::Percent(100.0),  // Whole screen
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            left: Val::Percent(0.0),
+            bottom: Val::Percent(0.0),
+            ..default()
+        },
+        JoystickFloating, // Appears where user touches
+        NoAction,
+    );
+
+    // Spawn spin button at bottom center
+    commands
+        .spawn((
+            Node {
+                width: Val::Px(100.0),
+                height: Val::Px(100.0),
+                position_type: PositionType::Absolute,
+                left: Val::Percent(50.0),
+                bottom: Val::Px(20.0),
+                margin: UiRect::left(Val::Px(-50.0)), // Center the button
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.6, 0.6, 0.6, 0.8)),
+            Button,
+            SpinButton,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new("SPIN"),
+                TextFont {
+                    font_size: 24.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.1, 0.1, 0.1)),
+            ));
+        });
 }
 
-// System to detect double-tap gestures
-fn detect_double_tap(
-    mut touch_events: EventReader<bevy::input::touch::TouchInput>,
-    mut touch_state: ResMut<TouchState>,
-    camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+// System to handle spin button interaction
+fn spin_button_interaction(
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<SpinButton>)>,
+    mut sword_query: Query<&mut AngularVelocity, With<Sword>>,
 ) {
-    let (camera, camera_transform) = camera_query.single();
-
-    for touch in touch_events.read() {
-        if touch.phase == bevy::input::touch::TouchPhase::Started {
-            // Convert touch position to world coordinates
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
-            {
-                touch_state.touch_start_position = Some(world_pos);
-                touch_state.current_touch_position = Some(world_pos);
-                touch_state.is_dragging = false;
+    for interaction in interaction_query.iter() {
+        if *interaction == Interaction::Pressed {
+            if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
+                angular_velocity.0 += 15.0; // Apply spin force
             }
-        } else if touch.phase == bevy::input::touch::TouchPhase::Moved {
-            // Update current touch position for movement
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
-            {
-                touch_state.current_touch_position = Some(world_pos);
-                
-                // Check if this is a drag (moved more than threshold)
-                if let Some(start_pos) = touch_state.touch_start_position {
-                    let distance = world_pos.distance(start_pos);
-                    if distance > 10.0 {
-                        // 10px drag threshold
-                        touch_state.is_dragging = true;
-                    }
-                }
-            }
-        } else if touch.phase == bevy::input::touch::TouchPhase::Ended {
-            // Only register tap if it wasn't a drag
-            if !touch_state.is_dragging {
-                if let Ok(world_pos) =
-                    camera.viewport_to_world_2d(camera_transform, touch.position)
-                {
-                    touch_state.register_tap(world_pos);
-                }
-            }
-            touch_state.touch_start_position = None;
-            touch_state.current_touch_position = None;
-            touch_state.is_dragging = false;
         }
     }
 }
 
-// System to handle player movement (keyboard and touch)
+// System to handle player movement (keyboard and virtual joystick)
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&Transform, &mut LinearVelocity), With<Player>>,
-    touch_state: Res<TouchState>,
+    mut player_query: Query<&mut LinearVelocity, With<Player>>,
+    mut joystick: EventReader<VirtualJoystickEvent<JoystickId>>,
 ) {
-    let (player_transform, mut velocity) = player_query.single_mut();
+    let mut velocity = player_query.single_mut();
     let mut direction = Vec2::ZERO;
 
     // Keyboard input for desktop
@@ -302,16 +273,12 @@ fn player_movement(
         direction.x += 1.0;
     }
 
-    // Touch input for mobile (drag to move)
-    if touch_state.is_dragging {
-        if let Some(world_pos) = touch_state.current_touch_position {
-            // Calculate direction from player to touch position
-            let target_direction = world_pos - player_transform.translation.truncate();
-            
-            // Only move if touch is reasonably far from player
-            if target_direction.length() > 20.0 {
-                direction = target_direction;
-            }
+    // Virtual joystick input for mobile
+    for event in joystick.read() {
+        let axis = event.axis();
+        // Only use joystick if keyboard isn't being used
+        if direction.length() < 0.1 {
+            direction = *axis;
         }
     }
 
@@ -328,22 +295,10 @@ fn player_movement(
 fn sword_spin(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
-    mut touch_state: ResMut<TouchState>,
     mut sword_query: Query<&mut AngularVelocity, With<Sword>>,
 ) {
-    let mut should_spin = false;
-
-    // Desktop input
+    // Desktop input only - mobile uses the button
     if keyboard.just_pressed(KeyCode::Space) || mouse.just_pressed(MouseButton::Left) {
-        should_spin = true;
-    }
-
-    // Mobile input - double-tap
-    if touch_state.consume_double_tap() {
-        should_spin = true;
-    }
-
-    if should_spin {
         if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
             angular_velocity.0 += 15.0; // Apply spin force
         }

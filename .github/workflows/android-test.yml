@@ -79,7 +79,7 @@ jobs:
           elif [ -d "$ANDROID_HOME/platforms/android-30" ]; then
             echo "android-30 already exists"
           else
-            echo "Warning: android-34 platform not found"
+            echo "Warning: android-34 platform not found in $ANDROID_HOME/platforms"
           fi
 
       - name: Run tests

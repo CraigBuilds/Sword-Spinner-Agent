@@ -100,8 +100,9 @@ The project includes a GitHub Actions workflow that automatically:
 
 ### Releasing
 
-Trigger the workflow manually or push changes:
-1. The workflow automatically builds and releases the unsigned APK
+The workflow can be triggered manually from the Actions tab:
+1. Go to: Actions → Android Release → Run workflow
+2. The workflow automatically builds and releases the unsigned APK
 
 ## Technical Details
 

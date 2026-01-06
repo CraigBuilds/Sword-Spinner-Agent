@@ -24,6 +24,33 @@ Sword Spinner is a top-down arcade game built with:
 - Add comments only for complex physics calculations or non-obvious logic
 - Keep functions focused and single-purpose
 
+## Development Workflow
+
+**IMPORTANT**: Always run quality checks during development to catch errors early.
+
+### Before Making Changes
+1. Run `cargo check` to verify the codebase compiles successfully
+2. Run `cargo clippy` to understand any existing linting issues
+3. Note any pre-existing issues so you don't fix unrelated problems
+
+### After Making Changes
+1. Run `cargo check` immediately after code changes to catch compilation errors
+2. Run `cargo clippy` to catch common mistakes and style issues
+3. Fix any clippy warnings related to your changes
+4. Run `cargo fmt` to format your code consistently
+
+### When to Run Checks
+- **Always** after editing Rust source files
+- **Before** committing changes with report_progress
+- **After** adding new dependencies
+- **After** making architectural changes
+
+### Efficient Usage
+- Use `cargo check` for fast syntax validation (faster than full build)
+- Use `cargo clippy` for comprehensive linting
+- Use `cargo fmt` to auto-format code
+- These checks are for local development only, not part of CI
+
 ## Build Commands
 
 ### Desktop
@@ -45,6 +72,12 @@ adb logcat | grep RustStdoutStderr          # View logs
 
 ## Testing
 
+### Quality Checks
+- **Always** run `cargo check` and `cargo clippy` before testing
+- Fix any compilation errors or clippy warnings related to your changes
+- Run `cargo fmt` to ensure consistent code style
+
+### Manual Testing
 - No automated test suite currently exists
 - Manual testing required for both platforms
 - For Android: Test touch controls on real devices, not just emulators

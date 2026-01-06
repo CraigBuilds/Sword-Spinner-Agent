@@ -1,5 +1,6 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use bevy_embedded_assets::EmbeddedAssetPlugin;
 use virtual_joystick::{
     create_joystick, JoystickFloating, NoAction, VirtualJoystickEvent, VirtualJoystickPlugin,
     VirtualJoystickUIBackground, VirtualJoystickUIKnob,
@@ -23,6 +24,7 @@ struct JoystickState {
 pub fn run() {
     App::new()
         .add_plugins((
+            EmbeddedAssetPlugin::default(),
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Sword Spinner".to_string(),

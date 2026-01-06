@@ -245,7 +245,7 @@ fn setup(mut commands: Commands) {
         Vec2::new(75.0, 75.0),           // Knob size
         Vec2::new(150.0, 150.0),         // Background size
         Node {
-            width: Val::Percent(50.0),   // Left half of screen
+            width: Val::Percent(100.0),  // Whole screen
             height: Val::Percent(100.0),
             position_type: PositionType::Absolute,
             left: Val::Percent(0.0),

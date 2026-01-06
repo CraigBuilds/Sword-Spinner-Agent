@@ -29,8 +29,8 @@ Move around the arena and use your spinning sword to knock physics objects aroun
 - **Spin Sword**: Spacebar or Left Mouse Button
 
 #### Mobile (Android)
-- **Movement**: Use the virtual joystick (appears on left side when you touch the screen)
-  - Touch and drag on the left half of screen to move
+- **Movement**: Use the virtual joystick (appears anywhere you touch the screen)
+  - Touch and drag anywhere to move
   - Floating joystick appears where you touch for intuitive control
   - Visual feedback shows your input direction
 - **Spin Sword**: Double-tap anywhere on screen (like Instagram likes!)

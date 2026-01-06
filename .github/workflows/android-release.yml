@@ -76,46 +76,26 @@ jobs:
     - name: Build release APK
       run: cargo apk build --lib --release --target aarch64-linux-android
 
-    - name: Sign APK
-      env:
-        ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    - name: Find unsigned APK
+      id: find-apk
       run: |
-        # Decode keystore from base64
-        echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > release.jks
-        
         # Find the unsigned APK
         APK_PATH=$(find target/release/apk -name "*.apk" | head -n 1)
-        
-        # Sign the APK
-        $ANDROID_HOME/build-tools/*/apksigner sign \
-          --ks release.jks \
-          --ks-pass pass:$KEYSTORE_PASSWORD \
-          --key-pass pass:$KEY_PASSWORD \
-          --ks-key-alias $KEY_ALIAS \
-          --out target/release/apk/sword-spinner-signed.apk \
-          $APK_PATH
-        
-        # Verify the signature
-        $ANDROID_HOME/build-tools/*/apksigner verify target/release/apk/sword-spinner-signed.apk
-        
-        # Clean up keystore
-        rm release.jks
+        echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+        echo "Found APK at: $APK_PATH"
 
-    - name: Upload signed APK
+    - name: Upload unsigned APK
       uses: actions/upload-artifact@v4
       with:
-        name: sword-spinner-signed
-        path: target/release/apk/sword-spinner-signed.apk
+        name: sword-spinner-unsigned
+        path: ${{ steps.find-apk.outputs.apk_path }}
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: Latest
         name: Latest Release
-        files: target/release/apk/sword-spinner-signed.apk
+        files: ${{ steps.find-apk.outputs.apk_path }}
         generate_release_notes: true
         prerelease: false
       env:

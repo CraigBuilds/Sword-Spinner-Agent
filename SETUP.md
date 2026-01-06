@@ -209,64 +209,19 @@ cargo apk run --release
 
 ## GitHub Actions Setup
 
-To enable automated Android releases, configure these GitHub secrets:
+The Android release workflow is configured to automatically build and release unsigned APKs.
 
-### 1. Generate Signing Keystore
+### Trigger a Release
 
-```bash
-# Generate a new keystore (only do this once!)
-keytool -genkey -v -keystore release.jks \
-    -keyalg RSA \
-    -keysize 2048 \
-    -validity 10000 \
-    -alias my-release-key
+The workflow can be triggered manually from the Actions tab:
+- Go to: Actions → Android Release → Run workflow
 
-# You'll be prompted for:
-# - Keystore password (remember this!)
-# - Key password (remember this!)
-# - Your name, organization, etc.
-```
+The GitHub Actions workflow will:
+1. Build the release APK
+2. Create a GitHub release
+3. Upload the unsigned APK
 
-### 2. Encode Keystore to Base64
-
-```bash
-# Linux/macOS
-base64 -w 0 release.jks > keystore.txt
-
-# Or
-cat release.jks | base64 > keystore.txt
-```
-
-### 3. Configure GitHub Secrets
-
-Go to your repository → Settings → Secrets and variables → Actions → New repository secret
-
-Add these secrets:
-- `ANDROID_KEYSTORE_BASE64`: Contents of keystore.txt
-- `KEYSTORE_PASSWORD`: The keystore password you chose
-- `KEY_ALIAS`: The alias (e.g., "my-release-key")
-- `KEY_PASSWORD`: The key password you chose
-
-### 4. Trigger a Release
-
-```bash
-# Create and push a version tag
-git tag v0.1.0
-git push origin v0.1.0
-
-# The GitHub Actions workflow will:
-# 1. Build the release APK
-# 2. Sign it with your keystore
-# 3. Create a GitHub release
-# 4. Upload the signed APK
-```
-
-### Testing CI Without Release
-
-```bash
-# Trigger workflow manually (builds unsigned APK)
-# Go to: Actions → Android Release → Run workflow
-```
+No additional setup or secrets are required.
 
 ## Testing
 

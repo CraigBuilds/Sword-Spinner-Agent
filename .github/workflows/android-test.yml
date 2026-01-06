@@ -83,6 +83,8 @@ jobs:
         run: cargo test --lib
 
       - name: Build debug APK for Android
+        # Only build aarch64 target for speed - full multi-arch builds
+        # are handled by android-release.yml workflow
         run: cargo apk build --lib --target aarch64-linux-android
 
       - name: Check APK was created

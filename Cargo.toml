@@ -50,10 +50,7 @@ build_targets = ["aarch64-linux-android"]
 min_sdk_version = 24
 target_sdk_version = 34
 compile_sdk_version = 34
-
-# Bundle assets folder with Android APK
-[package.metadata.android.assets]
-path = "assets"
+assets = "assets"
 
 # Release signing configuration for CI builds
 # Uses debug credentials - not for production app store releases

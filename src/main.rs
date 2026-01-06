@@ -31,6 +31,7 @@ fn main() {
                 player_movement,
                 spin_button_interaction,
                 sword_spin,
+                momentum_sword_spin,
                 camera_follow,
             )
                 .chain(),
@@ -56,7 +57,7 @@ fn setup(mut commands: Commands) {
     // Spawn camera
     commands.spawn((Camera2d, MainCamera));
 
-    // Spawn player
+    // Spawn player (circle shape to prevent sword collision)
     let player_entity = commands
         .spawn((
             Player,
@@ -67,7 +68,7 @@ fn setup(mut commands: Commands) {
             },
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
-            Collider::rectangle(40.0, 40.0),
+            Collider::circle(20.0), // Circle collider instead of rectangle
             LockedAxes::ROTATION_LOCKED,
             LinearVelocity::default(),
             LinearDamping(2.0),
@@ -75,22 +76,22 @@ fn setup(mut commands: Commands) {
         ))
         .id();
 
-    // Spawn sword
+    // Spawn sword (longer and less damping for more fluid motion)
     let sword_entity = commands
         .spawn((
             Sword,
             Sprite {
                 color: Color::srgb(0.6, 0.6, 0.6),
-                custom_size: Some(Vec2::new(60.0, 10.0)),
+                custom_size: Some(Vec2::new(90.0, 10.0)), // Longer sword (60 -> 90)
                 ..default()
             },
-            Transform::from_xyz(50.0, 0.0, 0.0),
+            Transform::from_xyz(60.0, 0.0, 0.0),
             RigidBody::Dynamic,
-            Collider::rectangle(60.0, 10.0),
+            Collider::rectangle(90.0, 10.0), // Longer sword collider
             AngularVelocity::default(),
             LinearVelocity::default(),
-            LinearDamping(1.0),
-            AngularDamping(2.0),
+            LinearDamping(0.5), // Reduced damping (1.0 -> 0.5)
+            AngularDamping(0.5), // Reduced damping (2.0 -> 0.5)
             Mass(0.5),
         ))
         .id();
@@ -100,7 +101,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(
         RevoluteJoint::new(player_entity, sword_entity)
             .with_local_anchor_1(Vec2::ZERO) // Player center
-            .with_local_anchor_2(Vec2::new(-25.0, 0.0)) // Offset from sword center
+            .with_local_anchor_2(Vec2::new(-35.0, 0.0)) // Offset adjusted for longer sword
             .with_compliance(0.00001), // Very stiff connection
     );
 
@@ -176,9 +177,9 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(pos.x, pos.y, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(30.0, 30.0),
-            LinearDamping(0.5),
-            AngularDamping(1.0),
-            Mass(1.0),
+            LinearDamping(0.3), // Less damping for more impact
+            AngularDamping(0.5), // Less damping for more impact
+            Mass(0.8), // Lighter obstacles for more dramatic impacts
         ));
     }
 
@@ -243,7 +244,7 @@ fn spin_button_interaction(
     for interaction in interaction_query.iter() {
         if *interaction == Interaction::Pressed {
             if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
-                angular_velocity.0 += 15.0; // Apply spin force
+                angular_velocity.0 += 30.0; // Bigger impulse (15.0 -> 30.0)
             }
         }
     }
@@ -284,7 +285,7 @@ fn player_movement(
     // Normalize and apply velocity
     if direction.length() > 0.0 {
         direction = direction.normalize();
-        velocity.0 = direction * 200.0; // Movement speed
+        velocity.0 = direction * 300.0; // Faster movement speed (200.0 -> 300.0)
     } else {
         velocity.0 = Vec2::ZERO;
     }
@@ -299,8 +300,33 @@ fn sword_spin(
     // Desktop input only - mobile uses the button
     if keyboard.just_pressed(KeyCode::Space) || mouse.just_pressed(MouseButton::Left) {
         if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
-            angular_velocity.0 += 15.0; // Apply spin force
+            angular_velocity.0 += 30.0; // Bigger impulse (15.0 -> 30.0)
         }
+    }
+}
+
+// System to add momentum-based sword spinning when player moves in circles
+// This makes the sword naturally spin more when the player moves in circular patterns
+fn momentum_sword_spin(
+    player_query: Query<&LinearVelocity, With<Player>>,
+    mut sword_query: Query<(&Transform, &mut AngularVelocity), With<Sword>>,
+    time: Res<Time>,
+) {
+    if let (Ok(player_velocity), Ok((sword_transform, mut sword_angular_velocity))) = 
+        (player_query.get_single(), sword_query.get_single_mut()) {
+        
+        // Calculate the perpendicular component of velocity relative to sword position
+        // This creates torque when moving in circles
+        let sword_offset = sword_transform.translation.truncate();
+        let velocity = player_velocity.0;
+        
+        // Cross product gives us the rotational contribution
+        // Perpendicular velocity creates spinning momentum
+        let cross = sword_offset.x * velocity.y - sword_offset.y * velocity.x;
+        
+        // Apply momentum-based angular acceleration (scaled down for smooth gameplay)
+        let momentum_factor = 0.05; // Tuned for fun natural spinning
+        sword_angular_velocity.0 += cross * momentum_factor * time.delta_secs();
     }
 }
 

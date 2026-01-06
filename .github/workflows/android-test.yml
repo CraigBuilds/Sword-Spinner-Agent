@@ -80,7 +80,7 @@ jobs:
 
       - name: Build debug APK for Android
         # Cargo.toml specifies aarch64-linux-android as the build target
-        run: cargo apk build --lib
+        run: cargo apk build
 
       - name: Check APK was created
         run: |

@@ -77,7 +77,7 @@ jobs:
         fi
 
     - name: Build release APK
-      run: cargo apk build --lib --release --target aarch64-linux-android
+      run: cargo apk build --release
 
     - name: Find signed APK
       id: find-apk

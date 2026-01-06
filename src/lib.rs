@@ -1,6 +1,13 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use std::time::{Duration, Instant};
+use virtual_joystick::*;
+
+// ID for the virtual joystick
+#[derive(Default, Debug, Reflect, Hash, Clone, PartialEq, Eq)]
+enum JoystickId {
+    #[default]
+    Movement,
+}
 
 #[bevy_main]
 fn main() {
@@ -15,15 +22,15 @@ fn main() {
                 ..default()
             }),
             PhysicsPlugins::default(),
+            VirtualJoystickPlugin::<JoystickId>::default(),
         ))
         .insert_resource(Gravity(Vec2::ZERO)) // Top-down game, no gravity
-        .insert_resource(TouchState::default())
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
-                detect_double_tap,
                 player_movement,
+                spin_button_interaction,
                 sword_spin,
                 camera_follow,
             )
@@ -42,80 +49,33 @@ struct Sword;
 #[derive(Component)]
 struct MainCamera;
 
-// Touch state resource for double-tap detection
-#[derive(Resource)]
-struct TouchState {
-    last_tap_time: Option<Instant>,
-    last_tap_position: Option<Vec2>,
-    double_tap_detected: bool,
-    double_tap_window: Duration,
-    tap_distance_threshold: f32,
-    touch_start_position: Option<Vec2>,
-    is_dragging: bool,
-    current_touch_position: Option<Vec2>, // Track current touch for movement
-}
-
-impl Default for TouchState {
-    fn default() -> Self {
-        Self {
-            last_tap_time: None,
-            last_tap_position: None,
-            double_tap_detected: false,
-            double_tap_window: Duration::from_millis(300),
-            tap_distance_threshold: 50.0,
-            touch_start_position: None,
-            is_dragging: false,
-            current_touch_position: None,
-        }
-    }
-}
-
-impl TouchState {
-    fn register_tap(&mut self, position: Vec2) {
-        let now = Instant::now();
-
-        // Check if this is a double-tap
-        if let (Some(last_time), Some(last_pos)) = (self.last_tap_time, self.last_tap_position) {
-            let time_diff = now.duration_since(last_time);
-            let distance = position.distance(last_pos);
-
-            if time_diff <= self.double_tap_window && distance <= self.tap_distance_threshold {
-                self.double_tap_detected = true;
-                // Reset to prevent triple-tap
-                self.last_tap_time = None;
-                self.last_tap_position = None;
-                return;
-            }
-        }
-
-        self.last_tap_time = Some(now);
-        self.last_tap_position = Some(position);
-    }
-
-    fn consume_double_tap(&mut self) -> bool {
-        let detected = self.double_tap_detected;
-        self.double_tap_detected = false;
-        detected
-    }
-}
+#[derive(Component)]
+struct SpinButton;
 
 // Setup system - initializes the game world
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     // Spawn camera
     commands.spawn((Camera2d, MainCamera));
 
-    // Spawn player
+    // Create a circle mesh for the player
+    let circle_mesh = Circle::new(20.0).mesh().build();
+    let circle_mesh_handle = meshes.add(circle_mesh);
+    let circle_material = materials.add(ColorMaterial::from_color(Color::srgb(0.2, 0.4, 0.8)));
+
+    // Spawn player (circle shape to prevent sword collision)
     let player_entity = commands
         .spawn((
             Player,
-            Sprite {
-                color: Color::srgb(0.2, 0.4, 0.8),
-                custom_size: Some(Vec2::new(40.0, 40.0)),
-                ..default()
-            },
+            Mesh2d(circle_mesh_handle),
+            MeshMaterial2d(circle_material),
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
-            Collider::rectangle(40.0, 40.0),
+            Collider::circle(20.0), // Circle collider
+            CollisionLayers::new([LayerMask(0b0001)], [LayerMask(0b1100)]), // Layer 0: collides with walls (bit 2) and obstacles (bit 3), NOT sword (bit 1)
             LockedAxes::ROTATION_LOCKED,
             LinearVelocity::default(),
             LinearDamping(2.0),
@@ -123,22 +83,23 @@ fn setup(mut commands: Commands) {
         ))
         .id();
 
-    // Spawn sword
+    // Spawn sword (longer and less damping for more fluid motion)
     let sword_entity = commands
         .spawn((
             Sword,
             Sprite {
                 color: Color::srgb(0.6, 0.6, 0.6),
-                custom_size: Some(Vec2::new(60.0, 10.0)),
+                custom_size: Some(Vec2::new(90.0, 10.0)), // Longer sword (60 -> 90)
                 ..default()
             },
-            Transform::from_xyz(50.0, 0.0, 0.0),
+            Transform::from_xyz(60.0, 0.0, 0.0),
             RigidBody::Dynamic,
-            Collider::rectangle(60.0, 10.0),
+            Collider::rectangle(90.0, 10.0), // Longer sword collider
+            CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b1100)]), // Layer 1: collides with walls (bit 2) and obstacles (bit 3), NOT player (bit 0)
             AngularVelocity::default(),
             LinearVelocity::default(),
-            LinearDamping(1.0),
-            AngularDamping(2.0),
+            LinearDamping(0.5),  // Reduced damping (1.0 -> 0.5)
+            AngularDamping(0.5), // Reduced damping (2.0 -> 0.5)
             Mass(0.5),
         ))
         .id();
@@ -148,7 +109,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(
         RevoluteJoint::new(player_entity, sword_entity)
             .with_local_anchor_1(Vec2::ZERO) // Player center
-            .with_local_anchor_2(Vec2::new(-25.0, 0.0)) // Offset from sword center
+            .with_local_anchor_2(Vec2::new(-35.0, 0.0)) // Offset adjusted for longer sword
             .with_compliance(0.00001), // Very stiff connection
     );
 
@@ -167,6 +128,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Bottom wall
@@ -179,6 +141,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, -arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Left wall
@@ -191,6 +154,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(-arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Right wall
@@ -203,6 +167,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Spawn some dynamic obstacles
@@ -224,65 +189,87 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(pos.x, pos.y, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(30.0, 30.0),
-            LinearDamping(0.5),
-            AngularDamping(1.0),
-            Mass(1.0),
+            CollisionLayers::new([LayerMask(0b1000)], [LayerMask(0b0111)]), // Layer 3: obstacles - collide with player, sword, and walls
+            LinearDamping(0.3),  // Less damping for more impact
+            AngularDamping(0.5), // Less damping for more impact
+            Mass(0.8),           // Lighter obstacles for more dramatic impacts
         ));
     }
+
+    // Spawn virtual joystick (floating type that appears where touched)
+    create_joystick(
+        &mut commands,
+        JoystickId::Movement,
+        Handle::default(),                      // No knob image
+        Handle::default(),                      // No background image
+        Some(Color::srgba(0.2, 0.4, 0.8, 0.8)), // Knob color (blue to match player)
+        Some(Color::srgba(0.3, 0.3, 0.3, 0.5)), // Background color (semi-transparent gray)
+        Some(Color::srgba(0.1, 0.1, 0.1, 0.3)), // Interactable area color
+        Vec2::new(75.0, 75.0),                  // Knob size
+        Vec2::new(150.0, 150.0),                // Background size
+        Node {
+            width: Val::Percent(100.0), // Whole screen
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            left: Val::Percent(0.0),
+            bottom: Val::Percent(0.0),
+            ..default()
+        },
+        JoystickFloating, // Appears where user touches
+        NoAction,
+    );
+
+    // Spawn spin button at bottom center
+    commands
+        .spawn((
+            Node {
+                width: Val::Px(100.0),
+                height: Val::Px(100.0),
+                position_type: PositionType::Absolute,
+                left: Val::Percent(50.0),
+                bottom: Val::Px(20.0),
+                margin: UiRect::left(Val::Px(-50.0)), // Center the button
+                justify_content: JustifyContent::Center,
+                align_items: AlignItems::Center,
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.6, 0.6, 0.6, 0.8)),
+            Button,
+            SpinButton,
+        ))
+        .with_children(|parent| {
+            parent.spawn((
+                Text::new("SPIN"),
+                TextFont {
+                    font_size: 24.0,
+                    ..default()
+                },
+                TextColor(Color::srgb(0.1, 0.1, 0.1)),
+            ));
+        });
 }
 
-// System to detect double-tap gestures
-fn detect_double_tap(
-    mut touch_events: EventReader<bevy::input::touch::TouchInput>,
-    mut touch_state: ResMut<TouchState>,
-    camera_query: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+// System to handle spin button interaction
+fn spin_button_interaction(
+    interaction_query: Query<&Interaction, (Changed<Interaction>, With<SpinButton>)>,
+    mut sword_query: Query<&mut AngularVelocity, With<Sword>>,
 ) {
-    let (camera, camera_transform) = camera_query.single();
-
-    for touch in touch_events.read() {
-        if touch.phase == bevy::input::touch::TouchPhase::Started {
-            // Convert touch position to world coordinates
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position) {
-                touch_state.touch_start_position = Some(world_pos);
-                touch_state.current_touch_position = Some(world_pos);
-                touch_state.is_dragging = false;
+    for interaction in interaction_query.iter() {
+        if *interaction == Interaction::Pressed {
+            if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
+                angular_velocity.0 += 30.0; // Bigger impulse (15.0 -> 30.0)
             }
-        } else if touch.phase == bevy::input::touch::TouchPhase::Moved {
-            // Update current touch position for movement
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position) {
-                touch_state.current_touch_position = Some(world_pos);
-
-                // Check if this is a drag (moved more than threshold)
-                if let Some(start_pos) = touch_state.touch_start_position {
-                    let distance = world_pos.distance(start_pos);
-                    if distance > 10.0 {
-                        // 10px drag threshold
-                        touch_state.is_dragging = true;
-                    }
-                }
-            }
-        } else if touch.phase == bevy::input::touch::TouchPhase::Ended {
-            // Only register tap if it wasn't a drag
-            if !touch_state.is_dragging {
-                if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
-                {
-                    touch_state.register_tap(world_pos);
-                }
-            }
-            touch_state.touch_start_position = None;
-            touch_state.current_touch_position = None;
-            touch_state.is_dragging = false;
         }
     }
 }
 
-// System to handle player movement (keyboard and touch)
+// System to handle player movement (keyboard and virtual joystick)
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&Transform, &mut LinearVelocity), With<Player>>,
-    touch_state: Res<TouchState>,
+    mut player_query: Query<&mut LinearVelocity, With<Player>>,
+    mut joystick: EventReader<VirtualJoystickEvent<JoystickId>>,
 ) {
-    let (player_transform, mut velocity) = player_query.single_mut();
+    let mut velocity = player_query.single_mut();
     let mut direction = Vec2::ZERO;
 
     // Keyboard input for desktop
@@ -299,23 +286,19 @@ fn player_movement(
         direction.x += 1.0;
     }
 
-    // Touch input for mobile (drag to move)
-    if touch_state.is_dragging {
-        if let Some(world_pos) = touch_state.current_touch_position {
-            // Calculate direction from player to touch position
-            let target_direction = world_pos - player_transform.translation.truncate();
-
-            // Only move if touch is reasonably far from player
-            if target_direction.length() > 20.0 {
-                direction = target_direction;
-            }
+    // Virtual joystick input for mobile
+    for event in joystick.read() {
+        let axis = event.axis();
+        // Only use joystick if keyboard isn't being used
+        if direction.length() < 0.1 {
+            direction = *axis;
         }
     }
 
     // Normalize and apply velocity
     if direction.length() > 0.0 {
         direction = direction.normalize();
-        velocity.0 = direction * 200.0; // Movement speed
+        velocity.0 = direction * 300.0; // Faster movement speed (200.0 -> 300.0)
     } else {
         velocity.0 = Vec2::ZERO;
     }
@@ -325,24 +308,12 @@ fn player_movement(
 fn sword_spin(
     keyboard: Res<ButtonInput<KeyCode>>,
     mouse: Res<ButtonInput<MouseButton>>,
-    mut touch_state: ResMut<TouchState>,
     mut sword_query: Query<&mut AngularVelocity, With<Sword>>,
 ) {
-    let mut should_spin = false;
-
-    // Desktop input
+    // Desktop input only - mobile uses the button
     if keyboard.just_pressed(KeyCode::Space) || mouse.just_pressed(MouseButton::Left) {
-        should_spin = true;
-    }
-
-    // Mobile input - double-tap
-    if touch_state.consume_double_tap() {
-        should_spin = true;
-    }
-
-    if should_spin {
         if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
-            angular_velocity.0 += 15.0; // Apply spin force
+            angular_velocity.0 += 30.0; // Bigger impulse (15.0 -> 30.0)
         }
     }
 }

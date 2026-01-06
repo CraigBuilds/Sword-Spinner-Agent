@@ -225,6 +225,43 @@ The GitHub Actions workflow will:
 
 No additional setup or secrets are required.
 
+### CI Android SDK Configuration
+
+The CI workflows use `android-actions/setup-android@v3` to configure the Android SDK environment. It's important to install the correct platform SDK version that matches the `target_sdk_version` specified in `Cargo.toml`.
+
+**Why explicit SDK installation is necessary:**
+- By default, `android-actions/setup-android` only installs basic command-line tools
+- cargo-apk requires the Android platform SDK to compile against (compileSdkVersion)
+- The platform SDK must match the `target_sdk_version` in your `[package.metadata.android]` section
+- Our project uses `target_sdk_version = 34`, so we must install `platforms;android-34`
+
+**Correct approach in workflow:**
+```yaml
+- name: Setup Android SDK
+  uses: android-actions/setup-android@v3
+  with:
+    packages: 'platforms;android-34 build-tools;34.0.0'
+```
+
+**Why this is better than symlink workarounds:**
+- ✅ Explicitly declares dependencies
+- ✅ Works with any future SDK updates
+- ✅ Matches best practices from Android documentation
+- ✅ No fragile filesystem manipulation
+- ✅ Clear and maintainable
+- ✅ Matches local development setup
+
+**Avoiding the symlink anti-pattern:**
+Previously, the workflows used a symlink from `android-34` to `android-30` as a workaround. This was problematic because:
+- ❌ Confusing - creates mismatched platform versions
+- ❌ Fragile - breaks if SDK layout changes
+- ❌ Non-standard - not documented in Android or cargo-apk guides
+- ❌ Hides the real issue - missing platform SDK installation
+- ❌ Could cause build issues if tools expect specific platform features
+
+**For your own workflows:**
+Always use the `packages` parameter to install the exact platform and build-tools versions you need. This ensures consistent builds and follows Android development best practices.
+
 ## Testing
 
 ### Desktop Testing

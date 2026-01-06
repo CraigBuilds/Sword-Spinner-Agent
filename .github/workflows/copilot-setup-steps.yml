@@ -27,15 +27,3 @@ jobs:
 
       - name: Fetch dependencies
         run: cargo fetch
-
-      - name: Run cargo check
-        run: cargo check --all-targets
-
-      - name: Run cargo clippy
-        run: cargo clippy --all-targets -- -D warnings
-
-      - name: Check code formatting
-        run: cargo fmt --check
-
-      - name: Run tests
-        run: cargo test --lib

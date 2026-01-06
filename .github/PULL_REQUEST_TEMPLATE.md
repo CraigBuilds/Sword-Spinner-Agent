@@ -13,9 +13,9 @@
 - [ ] Build/CI changes
 
 ## Code Quality Checklist
-**All items must be completed before merging:**
+**Run these checks during development to ensure code quality:**
 
-### Required Rust Checks
+### Required Rust Checks (run locally during development)
 - [ ] `cargo check` passes without errors
 - [ ] `cargo clippy` passes without warnings (run: `cargo clippy -- -D warnings`)
 - [ ] `cargo fmt --check` passes (run: `cargo fmt` to fix)

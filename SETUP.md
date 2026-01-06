@@ -95,10 +95,11 @@ cargo check --all-targets && cargo clippy --all-targets -- -D warnings && cargo 
 ```
 
 **For AI Agents:**
-- These checks are MANDATORY before any code submission
-- The CI pipeline will fail if any of these checks fail
+- These checks are MANDATORY and should be run during your development process
+- Run them frequently to catch and fix issues immediately as you work
 - See `.github/PULL_REQUEST_TEMPLATE.md` for the complete checklist
 - Configuration files `clippy.toml` and `rustfmt.toml` define project standards
+- Integrate these checks into your workflow to ensure high code quality before finalizing changes
 
 **Additional Tips:**
 - Use `cargo check` for fast syntax checking during development

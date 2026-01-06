@@ -201,7 +201,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - Avoid adding unnecessary dependencies
 - Review the PR template checklist before submitting
 
-These checks are automatically run in CI, but running them locally first saves time and ensures code quality.
+**For AI Agents:** Run these checks during your development process to catch and fix issues immediately, before finalizing your changes. This ensures high code quality without relying on CI gates.
 
 ## Acknowledgments
 

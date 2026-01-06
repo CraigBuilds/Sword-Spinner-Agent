@@ -26,6 +26,8 @@ build/
 captures/
 *.jks
 *.keystore
+# Allow my-release-key.keystore for demo purposes only
+!my-release-key.keystore
 
 # Temporary
 /tmp/

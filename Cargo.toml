@@ -22,6 +22,7 @@ bevy = { version = "0.15", default-features = false, features = [
     "multi_threaded",
 ] }
 avian2d = "0.2"
+virtual_joystick = "2.4.0"
 
 [target.'cfg(target_os = "android")'.dependencies]
 android-activity = { version = "0.6", features = ["native-activity"] }

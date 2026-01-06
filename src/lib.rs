@@ -1,6 +1,14 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use std::time::{Duration, Instant};
+use virtual_joystick::*;
+
+// ID for the virtual joystick
+#[derive(Default, Debug, Reflect, Hash, Clone, PartialEq, Eq)]
+enum JoystickId {
+    #[default]
+    Movement,
+}
 
 #[bevy_main]
 fn main() {
@@ -15,6 +23,7 @@ fn main() {
                 ..default()
             }),
             PhysicsPlugins::default(),
+            VirtualJoystickPlugin::<JoystickId>::default(),
         ))
         .insert_resource(Gravity(Vec2::ZERO)) // Top-down game, no gravity
         .insert_resource(TouchState::default())
@@ -50,9 +59,6 @@ struct TouchState {
     double_tap_detected: bool,
     double_tap_window: Duration,
     tap_distance_threshold: f32,
-    touch_start_position: Option<Vec2>,
-    is_dragging: bool,
-    current_touch_position: Option<Vec2>, // Track current touch for movement
 }
 
 impl Default for TouchState {
@@ -63,9 +69,6 @@ impl Default for TouchState {
             double_tap_detected: false,
             double_tap_window: Duration::from_millis(300),
             tap_distance_threshold: 50.0,
-            touch_start_position: None,
-            is_dragging: false,
-            current_touch_position: None,
         }
     }
 }
@@ -229,6 +232,29 @@ fn setup(mut commands: Commands) {
             Mass(1.0),
         ));
     }
+
+    // Spawn virtual joystick (floating type that appears where touched)
+    create_joystick(
+        &mut commands,
+        JoystickId::Movement,
+        Handle::default(), // No knob image
+        Handle::default(), // No background image
+        Some(Color::srgba(0.2, 0.4, 0.8, 0.8)), // Knob color (blue to match player)
+        Some(Color::srgba(0.3, 0.3, 0.3, 0.5)), // Background color (semi-transparent gray)
+        Some(Color::srgba(0.1, 0.1, 0.1, 0.3)), // Interactable area color
+        Vec2::new(75.0, 75.0),           // Knob size
+        Vec2::new(150.0, 150.0),         // Background size
+        Node {
+            width: Val::Percent(50.0),   // Left half of screen
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            left: Val::Percent(0.0),
+            bottom: Val::Percent(0.0),
+            ..default()
+        },
+        JoystickFloating, // Appears where user touches
+        NoAction,
+    );
 }
 
 // System to detect double-tap gestures
@@ -240,52 +266,22 @@ fn detect_double_tap(
     let (camera, camera_transform) = camera_query.single();
 
     for touch in touch_events.read() {
-        if touch.phase == bevy::input::touch::TouchPhase::Started {
+        if touch.phase == bevy::input::touch::TouchPhase::Ended {
             // Convert touch position to world coordinates
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
-            {
-                touch_state.touch_start_position = Some(world_pos);
-                touch_state.current_touch_position = Some(world_pos);
-                touch_state.is_dragging = false;
+            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position) {
+                touch_state.register_tap(world_pos);
             }
-        } else if touch.phase == bevy::input::touch::TouchPhase::Moved {
-            // Update current touch position for movement
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
-            {
-                touch_state.current_touch_position = Some(world_pos);
-                
-                // Check if this is a drag (moved more than threshold)
-                if let Some(start_pos) = touch_state.touch_start_position {
-                    let distance = world_pos.distance(start_pos);
-                    if distance > 10.0 {
-                        // 10px drag threshold
-                        touch_state.is_dragging = true;
-                    }
-                }
-            }
-        } else if touch.phase == bevy::input::touch::TouchPhase::Ended {
-            // Only register tap if it wasn't a drag
-            if !touch_state.is_dragging {
-                if let Ok(world_pos) =
-                    camera.viewport_to_world_2d(camera_transform, touch.position)
-                {
-                    touch_state.register_tap(world_pos);
-                }
-            }
-            touch_state.touch_start_position = None;
-            touch_state.current_touch_position = None;
-            touch_state.is_dragging = false;
         }
     }
 }
 
-// System to handle player movement (keyboard and touch)
+// System to handle player movement (keyboard and virtual joystick)
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
-    mut player_query: Query<(&Transform, &mut LinearVelocity), With<Player>>,
-    touch_state: Res<TouchState>,
+    mut player_query: Query<&mut LinearVelocity, With<Player>>,
+    mut joystick: EventReader<VirtualJoystickEvent<JoystickId>>,
 ) {
-    let (player_transform, mut velocity) = player_query.single_mut();
+    let mut velocity = player_query.single_mut();
     let mut direction = Vec2::ZERO;
 
     // Keyboard input for desktop
@@ -302,17 +298,10 @@ fn player_movement(
         direction.x += 1.0;
     }
 
-    // Touch input for mobile (drag to move)
-    if touch_state.is_dragging {
-        if let Some(world_pos) = touch_state.current_touch_position {
-            // Calculate direction from player to touch position
-            let target_direction = world_pos - player_transform.translation.truncate();
-            
-            // Only move if touch is reasonably far from player
-            if target_direction.length() > 20.0 {
-                direction = target_direction;
-            }
-        }
+    // Virtual joystick input for mobile
+    for event in joystick.read() {
+        let axis = event.axis();
+        direction = *axis;
     }
 
     // Normalize and apply velocity

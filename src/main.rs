@@ -68,7 +68,7 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
             Collider::circle(20.0), // Circle collider
-            CollisionLayers::new([LayerMask(0b0001)], [LayerMask(0b1110)]), // Layer 0: collides with walls (layer 2) and obstacles (layer 3), not sword (layer 1)
+            CollisionLayers::new([LayerMask(0b0001)], [LayerMask(0b1100)]), // Layer 0: collides with walls (bit 2) and obstacles (bit 3), NOT sword (bit 1)
             LockedAxes::ROTATION_LOCKED,
             LinearVelocity::default(),
             LinearDamping(2.0),
@@ -88,7 +88,7 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(60.0, 0.0, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(90.0, 10.0), // Longer sword collider
-            CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b1101)]), // Layer 1: collides with walls (layer 2) and obstacles (layer 3), not player (layer 0)
+            CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b1100)]), // Layer 1: collides with walls (bit 2) and obstacles (bit 3), NOT player (bit 0)
             AngularVelocity::default(),
             LinearVelocity::default(),
             LinearDamping(0.5), // Reduced damping (1.0 -> 0.5)

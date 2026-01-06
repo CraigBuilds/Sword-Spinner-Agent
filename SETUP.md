@@ -209,7 +209,7 @@ cargo apk run --release
 
 ## GitHub Actions Setup
 
-The Android release workflow is configured to automatically build and release unsigned APKs.
+The Android release workflow is configured to automatically build and release signed APKs.
 
 ### Trigger a Release
 
@@ -217,9 +217,11 @@ The workflow can be triggered manually from the Actions tab:
 - Go to: Actions → Android Release → Run workflow
 
 The GitHub Actions workflow will:
-1. Build the release APK
+1. Build the release APK with signing enabled
 2. Create a GitHub release
-3. Upload the unsigned APK
+3. Upload the signed APK
+
+**Signing Details**: The workflow uses a debug keystore (my-release-key.keystore) with standard Android debug credentials. This allows the APK to be installed on any device for testing and development. For production Play Store releases, a proper production keystore would be required.
 
 No additional setup or secrets are required.
 

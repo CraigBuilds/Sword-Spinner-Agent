@@ -102,7 +102,9 @@ The project includes a GitHub Actions workflow that automatically:
 
 The workflow can be triggered manually from the Actions tab:
 1. Go to: Actions → Android Release → Run workflow
-2. The workflow automatically builds and releases the unsigned APK
+2. The workflow automatically builds and releases a signed APK
+
+**Note**: Release APKs are signed with a debug keystore (using standard Android debug credentials). This allows the APK to be installed on any device for testing. For production Play Store releases, a proper production keystore would be required.
 
 ## Technical Details
 

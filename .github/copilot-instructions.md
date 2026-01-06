@@ -43,7 +43,7 @@ Sword Spinner is a top-down arcade game built with:
 
 ### When to Run Checks
 - **Always** after editing Rust source files
-- **After** committing changes with report_progress (to verify the commit)
+- **After** committing changes with report_progress (to verify committed changes compile and pass linting)
 - **After** adding new dependencies
 - **After** making architectural changes
 

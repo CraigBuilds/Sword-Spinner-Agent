@@ -75,9 +75,8 @@ Requirements:
 # Install cargo-apk
 cargo install cargo-apk
 
-# Add Android targets
+# Add Android target (64-bit ARM for modern devices)
 rustup target add aarch64-linux-android
-rustup target add armv7-linux-androideabi
 
 # Build debug APK
 cargo apk build

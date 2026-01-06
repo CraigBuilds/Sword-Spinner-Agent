@@ -117,11 +117,10 @@ cargo run --release
    source ~/.bashrc  # or source ~/.zshrc
    ```
 
-4. **Add Rust Android Targets**
+4. **Add Rust Android Target**
    ```bash
+   # Add 64-bit ARM target for modern Android devices
    rustup target add aarch64-linux-android
-   rustup target add armv7-linux-androideabi
-   rustup target add x86_64-linux-android
    ```
 
 5. **Install cargo-apk**

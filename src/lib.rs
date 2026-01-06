@@ -33,6 +33,8 @@ pub fn run() {
                 spin_button_interaction,
                 sword_spin,
                 camera_follow,
+                update_joystick_visibility,
+                update_direction_arrow,
             )
                 .chain(),
         )
@@ -57,6 +59,9 @@ struct MainCamera;
 
 #[derive(Component)]
 struct SpinButton;
+
+#[derive(Component)]
+struct DirectionArrow;
 
 // Setup system - initializes the game world
 fn setup(
@@ -203,16 +208,17 @@ fn setup(
     }
 
     // Spawn virtual joystick (floating type that appears where touched)
+    // Much smaller and faint translucent white
     create_joystick(
         &mut commands,
         JoystickId::Movement,
-        Handle::default(),                      // No knob image
-        Handle::default(),                      // No background image
-        Some(Color::srgba(0.2, 0.4, 0.8, 0.8)), // Knob color (blue to match player)
-        Some(Color::srgba(0.3, 0.3, 0.3, 0.5)), // Background color (semi-transparent gray)
-        Some(Color::srgba(0.1, 0.1, 0.1, 0.3)), // Interactable area color
-        Vec2::new(75.0, 75.0),                  // Knob size
-        Vec2::new(150.0, 150.0),                // Background size
+        Handle::default(),                       // No knob image
+        Handle::default(),                       // No background image
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.3)),  // Knob color (faint white)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.15)), // Background color (very faint white)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.0)),  // Interactable area color (invisible)
+        Vec2::new(30.0, 30.0),                   // Knob size (much smaller: 75 -> 30)
+        Vec2::new(60.0, 60.0),                   // Background size (much smaller: 150 -> 60)
         Node {
             width: Val::Percent(100.0), // Whole screen
             height: Val::Percent(100.0),
@@ -253,6 +259,19 @@ fn setup(
                 TextColor(Color::srgb(0.1, 0.1, 0.1)),
             ));
         });
+
+    // Spawn direction arrow (initially invisible)
+    // This arrow shows the joystick direction from the player
+    commands.spawn((
+        DirectionArrow,
+        Sprite {
+            color: Color::srgba(1.0, 0.0, 0.0, 0.0), // Red but initially invisible
+            custom_size: Some(Vec2::new(30.0, 6.0)), // Small arrow shape
+            ..default()
+        },
+        Transform::from_xyz(0.0, 0.0, 1.0), // Above player
+        Visibility::Hidden,
+    ));
 }
 
 // System to handle spin button interaction
@@ -333,6 +352,77 @@ fn camera_follow(
         if let Ok(mut camera_transform) = camera_query.get_single_mut() {
             camera_transform.translation.x = player_transform.translation.x;
             camera_transform.translation.y = player_transform.translation.y;
+        }
+    }
+}
+
+// System to update joystick visibility based on touch/interaction
+fn update_joystick_visibility(
+    mut joystick_query: Query<&mut BackgroundColor, With<VirtualJoystickNode<JoystickId>>>,
+    joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
+) {
+    // Make joystick invisible when not being touched
+    // The floating joystick automatically appears/disappears, but we want to make it completely invisible
+    // when not in use by setting opacity to 0
+    let is_active = !joystick_events.is_empty();
+
+    for mut bg_color in joystick_query.iter_mut() {
+        if is_active {
+            // Make visible when touched (restore original faint white colors)
+            if bg_color.0.alpha() < 0.1 {
+                bg_color.0.set_alpha(0.15);
+            }
+        } else {
+            // Make invisible when not touched
+            bg_color.0.set_alpha(0.0);
+        }
+    }
+}
+
+// System to update direction arrow based on joystick input
+#[allow(clippy::type_complexity)]
+fn update_direction_arrow(
+    player_query: Query<&Transform, With<Player>>,
+    mut arrow_query: Query<
+        (&mut Transform, &mut Sprite, &mut Visibility),
+        (With<DirectionArrow>, Without<Player>),
+    >,
+    mut joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
+) {
+    if let Ok(player_transform) = player_query.get_single() {
+        if let Ok((mut arrow_transform, mut arrow_sprite, mut visibility)) =
+            arrow_query.get_single_mut()
+        {
+            let mut has_input = false;
+            let mut direction = Vec2::ZERO;
+
+            // Get the latest joystick direction
+            for event in joystick_events.read() {
+                let axis = event.axis();
+                if axis.length() > 0.1 {
+                    direction = *axis;
+                    has_input = true;
+                }
+            }
+
+            if has_input {
+                // Show and update arrow
+                *visibility = Visibility::Visible;
+                arrow_sprite.color.set_alpha(0.8);
+
+                // Position arrow at player position
+                arrow_transform.translation.x = player_transform.translation.x;
+                arrow_transform.translation.y = player_transform.translation.y;
+                arrow_transform.translation.z = 1.0; // Above player
+
+                // Rotate arrow to point in joystick direction
+                let angle = direction.y.atan2(direction.x);
+                arrow_transform.rotation = Quat::from_rotation_z(angle);
+            } else {
+                // Hide arrow when no input
+                *visibility = Visibility::Hidden;
+                arrow_sprite.color.set_alpha(0.0);
+            }
         }
     }
 }

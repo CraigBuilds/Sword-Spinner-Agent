@@ -28,6 +28,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0'
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -61,19 +63,6 @@ jobs:
           key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-target-
-
-      - name: Create platform symlink
-        run: |
-          # cargo-apk expects platform-30 but CI provides platform-34
-          # Create symlink from android-34 to android-30 as workaround
-          if [ -d "$ANDROID_HOME/platforms/android-34" ] && [ ! -d "$ANDROID_HOME/platforms/android-30" ]; then
-            ln -s "$ANDROID_HOME/platforms/android-34" "$ANDROID_HOME/platforms/android-30"
-            echo "Created symlink from android-34 to android-30"
-          elif [ -d "$ANDROID_HOME/platforms/android-30" ]; then
-            echo "android-30 already exists"
-          else
-            echo "Warning: android-34 platform not found in $ANDROID_HOME/platforms"
-          fi
 
       - name: Run tests
         run: cargo test --lib

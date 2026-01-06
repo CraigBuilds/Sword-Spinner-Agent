@@ -53,19 +53,25 @@ struct MainCamera;
 struct SpinButton;
 
 // Setup system - initializes the game world
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     // Spawn camera
     commands.spawn((Camera2d, MainCamera));
+
+    // Create a circle mesh for the player
+    let circle_mesh = Circle::new(20.0).mesh().build();
+    let circle_mesh_handle = meshes.add(circle_mesh);
+    let circle_material = materials.add(ColorMaterial::from_color(Color::srgb(0.2, 0.4, 0.8)));
 
     // Spawn player (circle shape to prevent sword collision)
     let player_entity = commands
         .spawn((
             Player,
-            Sprite {
-                color: Color::srgb(0.2, 0.4, 0.8),
-                custom_size: Some(Vec2::new(40.0, 40.0)),
-                ..default()
-            },
+            Mesh2d(circle_mesh_handle),
+            MeshMaterial2d(circle_material),
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
             Collider::circle(20.0), // Circle collider

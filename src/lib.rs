@@ -399,8 +399,8 @@ fn update_joystick_visibility(
                     // Make visible when touched - restore alpha if it was set to 0
                     let current_alpha = bg_color.0.alpha();
                     if current_alpha < 0.01 {
-                        // Restore to faint white based on which component this is
-                        // This is a simple approach - children will restore to their appropriate alpha
+                        // Restore to a faint white alpha for all joystick children
+                        // This is a simple approach - all children are restored to the same faint alpha
                         bg_color.0.set_alpha(0.15);
                     }
                 } else {

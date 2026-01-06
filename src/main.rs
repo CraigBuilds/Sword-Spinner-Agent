@@ -300,7 +300,10 @@ fn player_movement(
     // Virtual joystick input for mobile
     for event in joystick.read() {
         let axis = event.axis();
-        direction = *axis;
+        // Only use joystick if keyboard isn't being used
+        if direction.length() < 0.1 {
+            direction = *axis;
+        }
     }
 
     // Normalize and apply velocity

@@ -64,8 +64,7 @@ jobs:
 
       - name: Create platform symlink
         run: |
-          # Fix for "Platform '30' is not installed" error (see PR #6 Attempt 3)
-          # cargo-apk looks for platform-30 but CI has platform-34
+          # cargo-apk expects platform-30 but CI provides platform-34
           # Create symlink from android-34 to android-30 as workaround
           if [ -d "$ANDROID_HOME/platforms/android-34" ] && [ ! -d "$ANDROID_HOME/platforms/android-30" ]; then
             ln -s "$ANDROID_HOME/platforms/android-34" "$ANDROID_HOME/platforms/android-30"
@@ -80,9 +79,8 @@ jobs:
         run: cargo test --lib
 
       - name: Build debug APK for Android
-        # Only build aarch64 target for speed - full multi-arch builds
-        # are handled by android-release.yml workflow
-        run: cargo apk build --lib --target aarch64-linux-android
+        # Cargo.toml specifies aarch64-linux-android as the build target
+        run: cargo apk build --lib
 
       - name: Check APK was created
         run: |

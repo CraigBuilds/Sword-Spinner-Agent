@@ -73,7 +73,7 @@ Top-down arcade game built with:
 - Consider system ordering
 
 **Touch Controls:**
-- Modify in main.rs
+- Modify in lib.rs
 - Test on real device
 - Avoid conflicts between movement and actions
 

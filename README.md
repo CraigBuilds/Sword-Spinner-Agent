@@ -45,8 +45,8 @@ See [SETUP.md](SETUP.md) for detailed setup instructions.
 
 ```
 src/
-  lib.rs               # Game implementation
-  main.rs              # Entry point
+  lib.rs               # Main game implementation
+  main.rs              # Desktop entry point
 Cargo.toml             # Dependencies & Android metadata
 AndroidManifest.xml    # Android configuration
 ```

@@ -20,7 +20,7 @@ Sword Spinner is a top-down arcade game built with:
 
 - Follow standard Rust conventions (rustfmt and clippy)
 - Use descriptive variable names
-- Prefer explicit types over `auto`/inference in complex scenarios
+- Add explicit type annotations only when inference is unclear or ambiguous
 - Add comments only for complex physics calculations or non-obvious logic
 - Keep functions focused and single-purpose
 
@@ -134,7 +134,7 @@ AndroidManifest.xml # Android configuration
 
 - GitHub Actions builds Android release APKs automatically
 - Workflows in `.github/workflows/` configure build steps
-- `copilot-setup-steps.yml` ensures proper toolchain for Copilot agent
+- `copilot-setup-steps.yml` ensures proper Rust toolchain setup (rustfmt, clippy)
 - Rust cache is shared with key "bevy" for faster builds
 
 ## Resources

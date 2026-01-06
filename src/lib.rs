@@ -69,7 +69,7 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
             Collider::circle(20.0), // Circle collider
-            CollisionLayers::new([LayerMask(0b0001)], [LayerMask(0b0110)]), // Collides with walls and obstacles, not sword
+            CollisionLayers::new([LayerMask(0b0001)], [LayerMask(0b1110)]), // Layer 0: collides with walls (layer 2) and obstacles (layer 3), not sword (layer 1)
             LockedAxes::ROTATION_LOCKED,
             LinearVelocity::default(),
             LinearDamping(2.0),
@@ -89,7 +89,7 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(60.0, 0.0, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(90.0, 10.0), // Longer sword collider
-            CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b0110)]), // Collides with walls and obstacles, not player
+            CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b1101)]), // Layer 1: collides with walls (layer 2) and obstacles (layer 3), not player (layer 0)
             AngularVelocity::default(),
             LinearVelocity::default(),
             LinearDamping(0.5), // Reduced damping (1.0 -> 0.5)
@@ -122,7 +122,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
-        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Bottom wall
@@ -135,7 +135,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, -arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
-        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Left wall
@@ -148,7 +148,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(-arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
-        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Right wall
@@ -161,7 +161,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
-        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Spawn some dynamic obstacles
@@ -183,7 +183,7 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(pos.x, pos.y, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(30.0, 30.0),
-            CollisionLayers::new([LayerMask(0b1000)], [LayerMask(0b0111)]), // Layer 3: obstacles
+            CollisionLayers::new([LayerMask(0b1000)], [LayerMask(0b0111)]), // Layer 3: obstacles - collide with player, sword, and walls
             LinearDamping(0.3), // Less damping for more impact
             AngularDamping(0.5), // Less damping for more impact
             Mass(0.8), // Lighter obstacles for more dramatic impacts

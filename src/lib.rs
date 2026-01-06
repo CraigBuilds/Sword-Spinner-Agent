@@ -254,8 +254,8 @@ fn setup(
         Visibility::Hidden,
     ));
 
-    // Note: Virtual joystick temporarily disabled for testing
-    // spawn_virtual_joystick(&mut commands);
+    // Note: Touch controls are temporarily disabled/stubbed out
+    // A proper implementation will be added after verifying the app loads on Android
 }
 
 // System to handle spin button interaction
@@ -272,18 +272,21 @@ fn spin_button_interaction(
     }
 }
 
-/// Updates touch state resource for mobile control - simplified version without joystick lib
+/// Updates touch state resource for mobile control
+/// 
+/// **NOTE:** This is currently a placeholder implementation. Touch controls are disabled
+/// to isolate and fix the Android loading issue. Once the app loads successfully on Android,
+/// this will be properly implemented to calculate movement direction based on touch input.
 fn update_touch_state(
     mut touch_state: ResMut<TouchState>,
     touches: Option<Res<Touches>>,
 ) {
     if let Some(touches) = touches {
         if let Some(_touch) = touches.first_pressed_position() {
-            // Simple touch control: treat touch position as direction from center
-            // This is a placeholder - a full implementation would track touch delta
+            // TODO: Calculate actual direction from touch position
+            // For now, just mark as active but don't move (placeholder)
             touch_state.is_active = true;
-            // Normalize touch position to direction (simplified)
-            touch_state.direction = Vec2::ZERO; // Placeholder for now
+            touch_state.direction = Vec2::ZERO; // Will be calculated in future implementation
         } else {
             touch_state.is_active = false;
             touch_state.direction = Vec2::ZERO;

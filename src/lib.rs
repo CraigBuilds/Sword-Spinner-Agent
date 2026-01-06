@@ -1,6 +1,9 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use virtual_joystick::*;
+use virtual_joystick::{
+    create_joystick, JoystickFloating, NoAction, VirtualJoystickEvent, VirtualJoystickNode,
+    VirtualJoystickPlugin,
+};
 
 // ID for the virtual joystick
 #[derive(Default, Debug, Reflect, Hash, Clone, PartialEq, Eq)]
@@ -71,6 +74,12 @@ struct SpinButton;
 
 #[derive(Component)]
 struct DirectionArrow;
+
+// Constants for joystick configuration
+const JOYSTICK_KNOB_SIZE: Vec2 = Vec2::new(30.0, 30.0);
+const JOYSTICK_BACKGROUND_SIZE: Vec2 = Vec2::new(60.0, 60.0);
+const JOYSTICK_KNOB_ALPHA: f32 = 0.3;
+const JOYSTICK_BACKGROUND_ALPHA: f32 = 0.15;
 
 // Setup system - initializes the game world
 fn setup(
@@ -217,30 +226,6 @@ fn setup(
         ));
     }
 
-    // Spawn virtual joystick (floating type that appears where touched)
-    // Much smaller and faint translucent white with circular image assets
-    create_joystick(
-        &mut commands,
-        JoystickId::Movement,
-        asset_server.load("Knob.png"),          // Knob image (circular)
-        asset_server.load("Outline.png"),       // Background image (circular)
-        Some(Color::srgba(1.0, 1.0, 1.0, 0.3)), // Knob color (faint white tint)
-        Some(Color::srgba(1.0, 1.0, 1.0, 0.15)), // Background color (very faint white tint)
-        Some(Color::srgba(1.0, 1.0, 1.0, 0.0)), // Interactable area color (invisible)
-        Vec2::new(30.0, 30.0),                  // Knob size (much smaller: 75 -> 30)
-        Vec2::new(60.0, 60.0),                  // Background size (much smaller: 150 -> 60)
-        Node {
-            width: Val::Percent(100.0), // Whole screen
-            height: Val::Percent(100.0),
-            position_type: PositionType::Absolute,
-            left: Val::Percent(0.0),
-            bottom: Val::Percent(0.0),
-            ..default()
-        },
-        JoystickFloating, // Appears where user touches
-        NoAction,
-    );
-
     // Spawn spin button at bottom center
     commands
         .spawn((
@@ -282,6 +267,35 @@ fn setup(
         Transform::from_xyz(0.0, 0.0, 1.0), // Above player
         Visibility::Hidden,
     ));
+
+    // Spawn virtual joystick
+    spawn_virtual_joystick(&mut commands, &asset_server);
+}
+
+/// Spawns a floating virtual joystick that appears where the user touches the screen.
+/// The joystick uses image assets (Knob.png and Outline.png) with translucent white tint.
+fn spawn_virtual_joystick(commands: &mut Commands, asset_server: &AssetServer) {
+    create_joystick(
+        commands,
+        JoystickId::Movement,
+        asset_server.load("Knob.png"),
+        asset_server.load("Outline.png"),
+        Some(Color::srgba(1.0, 1.0, 1.0, JOYSTICK_KNOB_ALPHA)),
+        Some(Color::srgba(1.0, 1.0, 1.0, JOYSTICK_BACKGROUND_ALPHA)),
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.0)), // Invisible interactable area
+        JOYSTICK_KNOB_SIZE,
+        JOYSTICK_BACKGROUND_SIZE,
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            position_type: PositionType::Absolute,
+            left: Val::Percent(0.0),
+            bottom: Val::Percent(0.0),
+            ..default()
+        },
+        JoystickFloating,
+        NoAction,
+    );
 }
 
 // System to handle spin button interaction
@@ -298,22 +312,19 @@ fn spin_button_interaction(
     }
 }
 
-// System to update joystick state from events
+/// Updates the joystick state resource based on input events from the virtual joystick.
+/// Sets the direction and active status based on whether the joystick is being used.
 fn update_joystick_state(
     mut joystick_state: ResMut<JoystickState>,
     mut joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
 ) {
-    let mut has_event = false;
-
-    for event in joystick_events.read() {
+    // Process joystick events
+    if let Some(event) = joystick_events.read().last() {
         let axis = event.axis();
         joystick_state.direction = *axis;
         joystick_state.is_active = axis.length() > 0.01;
-        has_event = true;
-    }
-
-    // If no events this frame, mark as inactive
-    if !has_event {
+    } else if !joystick_events.is_empty() {
+        // No events means joystick was released
         joystick_state.is_active = false;
         joystick_state.direction = Vec2::ZERO;
     }
@@ -384,29 +395,29 @@ fn camera_follow(
     }
 }
 
-// System to update joystick visibility based on touch/interaction
+/// Updates joystick visibility based on whether it's being actively touched.
+/// When not in use, the joystick becomes completely transparent (alpha = 0).
+/// When touched, it becomes visible with the configured alpha values.
 fn update_joystick_visibility(
     joystick_query: Query<&Children, With<VirtualJoystickNode<JoystickId>>>,
     mut bg_color_query: Query<&mut BackgroundColor>,
     joystick_state: Res<JoystickState>,
 ) {
-    // Make joystick invisible when not being touched
-    // Update all child nodes (knob and background) to ensure complete invisibility
     for children in joystick_query.iter() {
         for &child in children.iter() {
             if let Ok(mut bg_color) = bg_color_query.get_mut(child) {
-                if joystick_state.is_active {
-                    // Make visible when touched - restore alpha if it was set to 0
-                    let current_alpha = bg_color.0.alpha();
-                    if current_alpha < 0.01 {
-                        // Restore to a faint white alpha for all joystick children
-                        // This is a simple approach - all children are restored to the same faint alpha
-                        bg_color.0.set_alpha(0.15);
+                let target_alpha = if joystick_state.is_active {
+                    // Restore visibility when touched
+                    if bg_color.0.alpha() < 0.01 {
+                        JOYSTICK_BACKGROUND_ALPHA
+                    } else {
+                        bg_color.0.alpha()
                     }
                 } else {
-                    // Make invisible when not touched
-                    bg_color.0.set_alpha(0.0);
-                }
+                    // Hide when not touched
+                    0.0
+                };
+                bg_color.0.set_alpha(target_alpha);
             }
         }
     }

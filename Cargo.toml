@@ -46,3 +46,11 @@ strip = true
 package = "com.swordspinner.game"
 build_targets = ["aarch64-linux-android"]
 target_sdk_version = 34
+
+# Release signing configuration for CI builds
+# Uses debug credentials - not for production app store releases
+[package.metadata.android.signing.release]
+keystore = "my-release-key.keystore"
+keystore_password = "android"
+key_alias = "androiddebugkey"
+key_password = "android"

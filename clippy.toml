@@ -6,7 +6,7 @@
 
 # Enable pedantic lints for better code quality
 # These catch common mistakes and non-idiomatic code
-warn-on-all-wildcard-imports = true
+# warn-on-all-wildcard-imports = true  # Disabled: prelude wildcard imports are idiomatic in Bevy/Avian2D
 
 # Complexity - warn about overly complex code
 too-many-arguments-threshold = 7

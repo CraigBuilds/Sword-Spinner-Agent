@@ -29,7 +29,10 @@ Move around the arena and use your spinning sword to knock physics objects aroun
 - **Spin Sword**: Spacebar or Left Mouse Button
 
 #### Mobile (Android)
-- **Movement**: Touch and drag anywhere on screen - your character follows your finger
+- **Movement**: Use the virtual joystick (appears on left side when you touch the screen)
+  - Touch and drag on the left half of screen to move
+  - Floating joystick appears where you touch for intuitive control
+  - Visual feedback shows your input direction
 - **Spin Sword**: Double-tap anywhere on screen (like Instagram likes!)
   - Must tap twice within 300ms
   - Taps must be within 50 pixels of each other
@@ -38,12 +41,12 @@ Move around the arena and use your spinning sword to knock physics objects aroun
 
 ### Double-Tap Design
 The double-tap mechanic was chosen because:
-- ✅ Allows simultaneous movement and spinning (drag + tap)
+- ✅ Allows simultaneous movement and spinning (joystick + tap)
 - ✅ Prevents accidental spins during normal gameplay
 - ✅ Feels intentional and satisfying (like a "power move")
 - ✅ Familiar gesture from social media apps
 - ✅ Works with one or two hands
-- ✅ Doesn't interfere with drag-to-move controls
+- ✅ Doesn't interfere with joystick controls
 
 ## Building
 
@@ -112,7 +115,7 @@ The workflow can be triggered manually from the Actions tab:
 - **Engine**: Bevy 0.15 with ECS architecture
 - **Physics**: Avian2D for 2D rigid body physics
 - **Joint System**: RevoluteJoint connects sword to player
-- **Touch Handling**: Custom TouchState resource for gesture detection
+- **Touch Handling**: Bevy virtual_joystick for mobile controls, custom double-tap detection for sword spinning
 
 ### Physics Configuration
 - Zero gravity (top-down game)
@@ -167,4 +170,5 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 - Built with [Bevy](https://bevyengine.org/) game engine
 - Physics powered by [Avian2D](https://github.com/Jondolf/avian)
+- Touch controls provided by [virtual_joystick](https://github.com/SergioRibera/virtual_joystick)
 - Inspired by classic top-down arcade games

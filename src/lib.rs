@@ -77,6 +77,7 @@ fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     // Spawn camera
     commands.spawn((Camera2d, MainCamera));
@@ -217,17 +218,17 @@ fn setup(
     }
 
     // Spawn virtual joystick (floating type that appears where touched)
-    // Much smaller and faint translucent white
+    // Much smaller and faint translucent white with circular image assets
     create_joystick(
         &mut commands,
         JoystickId::Movement,
-        Handle::default(),                       // No knob image
-        Handle::default(),                       // No background image
-        Some(Color::srgba(1.0, 1.0, 1.0, 0.3)),  // Knob color (faint white)
-        Some(Color::srgba(1.0, 1.0, 1.0, 0.15)), // Background color (very faint white)
-        Some(Color::srgba(1.0, 1.0, 1.0, 0.0)),  // Interactable area color (invisible)
-        Vec2::new(30.0, 30.0),                   // Knob size (much smaller: 75 -> 30)
-        Vec2::new(60.0, 60.0),                   // Background size (much smaller: 150 -> 60)
+        asset_server.load("Knob.png"),          // Knob image (circular)
+        asset_server.load("Outline.png"),       // Background image (circular)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.3)), // Knob color (faint white tint)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.15)), // Background color (very faint white tint)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.0)), // Interactable area color (invisible)
+        Vec2::new(30.0, 30.0),                  // Knob size (much smaller: 75 -> 30)
+        Vec2::new(60.0, 60.0),                  // Background size (much smaller: 150 -> 60)
         Node {
             width: Val::Percent(100.0), // Whole screen
             height: Val::Percent(100.0),

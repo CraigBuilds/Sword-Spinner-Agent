@@ -329,7 +329,7 @@ adb logcat *:E  # Only errors
 ## Common Issues
 
 ### "APK won't install on device"
-- Check minimum SDK version (must be Android 12+)
+- Check minimum SDK version (requires Android 7.0 / API 24 or higher)
 - Uninstall previous version first
 - Enable "Install from unknown sources" in developer settings
 

@@ -36,19 +36,27 @@ Sword Spinner is a top-down arcade game built with:
 ### After Making Changes
 1. Run `cargo check` immediately after code changes to catch compilation errors
 2. Run `cargo clippy` to catch common mistakes and style issues
-3. Fix any clippy warnings related to your changes
-4. Run `cargo fmt` to format your code consistently
+3. Run `cargo fmt` to format your code consistently
+4. **Commit changes first** using report_progress with your initial implementation
+5. **Then fix** any clippy warnings related to your changes
+6. **Commit fixes** in a separate commit using report_progress
 
 ### When to Run Checks
 - **Always** after editing Rust source files
-- **Before** committing changes with report_progress
+- **After** committing changes with report_progress (to verify the commit)
 - **After** adding new dependencies
 - **After** making architectural changes
+
+### Full Build Verification
+- Run a full build (`cargo build` or `cargo run`) only at the end of your work
+- Or when there's a specific reason to verify the complete build process
+- Full builds are slower than `cargo check`, so use them sparingly
 
 ### Efficient Usage
 - Use `cargo check` for fast syntax validation (faster than full build)
 - Use `cargo clippy` for comprehensive linting
 - Use `cargo fmt` to auto-format code
+- Reserve full builds for final verification or when specifically needed
 - These checks are for local development only, not part of CI
 
 ## Build Commands

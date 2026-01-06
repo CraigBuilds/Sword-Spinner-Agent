@@ -308,16 +308,16 @@ fn sword_spin(
 // System to add momentum-based sword spinning when player moves in circles
 // This makes the sword naturally spin more when the player moves in circular patterns
 fn momentum_sword_spin(
-    player_query: Query<&LinearVelocity, With<Player>>,
+    player_query: Query<(&Transform, &LinearVelocity), With<Player>>,
     mut sword_query: Query<(&Transform, &mut AngularVelocity), With<Sword>>,
     time: Res<Time>,
 ) {
-    if let (Ok(player_velocity), Ok((sword_transform, mut sword_angular_velocity))) = 
+    if let (Ok((player_transform, player_velocity)), Ok((sword_transform, mut sword_angular_velocity))) = 
         (player_query.get_single(), sword_query.get_single_mut()) {
         
         // Calculate the perpendicular component of velocity relative to sword position
         // This creates torque when moving in circles
-        let sword_offset = sword_transform.translation.truncate();
+        let sword_offset = sword_transform.translation.truncate() - player_transform.translation.truncate();
         let velocity = player_velocity.0;
         
         // Cross product gives us the rotational contribution

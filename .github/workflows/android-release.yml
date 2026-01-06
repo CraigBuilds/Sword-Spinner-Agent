@@ -1,10 +1,6 @@
 name: Android Release
 
 on:
-  push:
-    tags:
-      - 'v*'
-      - 'Latest'
   workflow_dispatch:
 
 env:
@@ -80,8 +76,7 @@ jobs:
     - name: Build release APK
       run: cargo apk build --lib --release --target aarch64-linux-android
 
-    - name: Sign APK (on tag push)
-      if: startsWith(github.ref, 'refs/tags/')
+    - name: Sign APK
       env:
         ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -109,25 +104,19 @@ jobs:
         # Clean up keystore
         rm release.jks
 
-    - name: Upload unsigned APK
-      if: "!startsWith(github.ref, 'refs/tags/')"
-      uses: actions/upload-artifact@v4
-      with:
-        name: sword-spinner-unsigned
-        path: target/release/apk/*.apk
-
     - name: Upload signed APK
-      if: startsWith(github.ref, 'refs/tags/')
       uses: actions/upload-artifact@v4
       with:
         name: sword-spinner-signed
         path: target/release/apk/sword-spinner-signed.apk
 
     - name: Create GitHub Release
-      if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: Latest
+        name: Latest Release
         files: target/release/apk/sword-spinner-signed.apk
         generate_release_notes: true
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

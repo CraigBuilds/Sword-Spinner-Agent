@@ -385,21 +385,28 @@ fn camera_follow(
 
 // System to update joystick visibility based on touch/interaction
 fn update_joystick_visibility(
-    mut joystick_query: Query<&mut BackgroundColor, With<VirtualJoystickNode<JoystickId>>>,
+    joystick_query: Query<&Children, With<VirtualJoystickNode<JoystickId>>>,
+    mut bg_color_query: Query<&mut BackgroundColor>,
     joystick_state: Res<JoystickState>,
 ) {
     // Make joystick invisible when not being touched
-    // The floating joystick automatically appears/disappears, but we want to make it completely invisible
-    // when not in use by setting opacity to 0
-    for mut bg_color in joystick_query.iter_mut() {
-        if joystick_state.is_active {
-            // Make visible when touched (restore original faint white colors)
-            if bg_color.0.alpha() < 0.1 {
-                bg_color.0.set_alpha(0.15);
+    // Update all child nodes (knob and background) to ensure complete invisibility
+    for children in joystick_query.iter() {
+        for &child in children.iter() {
+            if let Ok(mut bg_color) = bg_color_query.get_mut(child) {
+                if joystick_state.is_active {
+                    // Make visible when touched - restore alpha if it was set to 0
+                    let current_alpha = bg_color.0.alpha();
+                    if current_alpha < 0.01 {
+                        // Restore to faint white based on which component this is
+                        // This is a simple approach - children will restore to their appropriate alpha
+                        bg_color.0.set_alpha(0.15);
+                    }
+                } else {
+                    // Make invisible when not touched
+                    bg_color.0.set_alpha(0.0);
+                }
             }
-        } else {
-            // Make invisible when not touched
-            bg_color.0.set_alpha(0.0);
         }
     }
 }

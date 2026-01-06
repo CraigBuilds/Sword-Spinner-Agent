@@ -52,22 +52,29 @@ struct MainCamera;
 struct SpinButton;
 
 // Setup system - initializes the game world
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     // Spawn camera
     commands.spawn((Camera2d, MainCamera));
 
-    // Spawn player
+    // Create a circle mesh for the player
+    let circle_mesh = Circle::new(20.0).mesh().build();
+    let circle_mesh_handle = meshes.add(circle_mesh);
+    let circle_material = materials.add(ColorMaterial::from_color(Color::srgb(0.2, 0.4, 0.8)));
+
+    // Spawn player (circle shape to prevent sword collision)
     let player_entity = commands
         .spawn((
             Player,
-            Sprite {
-                color: Color::srgb(0.2, 0.4, 0.8),
-                custom_size: Some(Vec2::new(40.0, 40.0)),
-                ..default()
-            },
+            Mesh2d(circle_mesh_handle),
+            MeshMaterial2d(circle_material),
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
-            Collider::rectangle(40.0, 40.0),
+            Collider::circle(20.0), // Circle collider
+            CollisionLayers::new([LayerMask(0b0001)], [LayerMask(0b1100)]), // Layer 0: collides with walls (bit 2) and obstacles (bit 3), NOT sword (bit 1)
             LockedAxes::ROTATION_LOCKED,
             LinearVelocity::default(),
             LinearDamping(2.0),
@@ -75,22 +82,23 @@ fn setup(mut commands: Commands) {
         ))
         .id();
 
-    // Spawn sword
+    // Spawn sword (longer and less damping for more fluid motion)
     let sword_entity = commands
         .spawn((
             Sword,
             Sprite {
                 color: Color::srgb(0.6, 0.6, 0.6),
-                custom_size: Some(Vec2::new(60.0, 10.0)),
+                custom_size: Some(Vec2::new(90.0, 10.0)), // Longer sword (60 -> 90)
                 ..default()
             },
-            Transform::from_xyz(50.0, 0.0, 0.0),
+            Transform::from_xyz(60.0, 0.0, 0.0),
             RigidBody::Dynamic,
-            Collider::rectangle(60.0, 10.0),
+            Collider::rectangle(90.0, 10.0), // Longer sword collider
+            CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b1100)]), // Layer 1: collides with walls (bit 2) and obstacles (bit 3), NOT player (bit 0)
             AngularVelocity::default(),
             LinearVelocity::default(),
-            LinearDamping(1.0),
-            AngularDamping(2.0),
+            LinearDamping(0.5), // Reduced damping (1.0 -> 0.5)
+            AngularDamping(0.5), // Reduced damping (2.0 -> 0.5)
             Mass(0.5),
         ))
         .id();
@@ -100,7 +108,7 @@ fn setup(mut commands: Commands) {
     commands.spawn(
         RevoluteJoint::new(player_entity, sword_entity)
             .with_local_anchor_1(Vec2::ZERO) // Player center
-            .with_local_anchor_2(Vec2::new(-25.0, 0.0)) // Offset from sword center
+            .with_local_anchor_2(Vec2::new(-35.0, 0.0)) // Offset adjusted for longer sword
             .with_compliance(0.00001), // Very stiff connection
     );
 
@@ -119,6 +127,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Bottom wall
@@ -131,6 +140,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, -arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Left wall
@@ -143,6 +153,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(-arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Right wall
@@ -155,6 +166,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b1011)]), // Layer 2: walls - collide with player, sword, and obstacles
     ));
 
     // Spawn some dynamic obstacles
@@ -176,9 +188,10 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(pos.x, pos.y, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(30.0, 30.0),
-            LinearDamping(0.5),
-            AngularDamping(1.0),
-            Mass(1.0),
+            CollisionLayers::new([LayerMask(0b1000)], [LayerMask(0b0111)]), // Layer 3: obstacles - collide with player, sword, and walls
+            LinearDamping(0.3), // Less damping for more impact
+            AngularDamping(0.5), // Less damping for more impact
+            Mass(0.8), // Lighter obstacles for more dramatic impacts
         ));
     }
 
@@ -243,7 +256,7 @@ fn spin_button_interaction(
     for interaction in interaction_query.iter() {
         if *interaction == Interaction::Pressed {
             if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
-                angular_velocity.0 += 15.0; // Apply spin force
+                angular_velocity.0 += 30.0; // Bigger impulse (15.0 -> 30.0)
             }
         }
     }
@@ -284,7 +297,7 @@ fn player_movement(
     // Normalize and apply velocity
     if direction.length() > 0.0 {
         direction = direction.normalize();
-        velocity.0 = direction * 200.0; // Movement speed
+        velocity.0 = direction * 300.0; // Faster movement speed (200.0 -> 300.0)
     } else {
         velocity.0 = Vec2::ZERO;
     }
@@ -299,7 +312,7 @@ fn sword_spin(
     // Desktop input only - mobile uses the button
     if keyboard.just_pressed(KeyCode::Space) || mouse.just_pressed(MouseButton::Left) {
         if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
-            angular_velocity.0 += 15.0; // Apply spin force
+            angular_velocity.0 += 30.0; // Bigger impulse (15.0 -> 30.0)
         }
     }
 }

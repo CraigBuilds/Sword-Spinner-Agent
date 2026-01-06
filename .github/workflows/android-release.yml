@@ -90,10 +90,10 @@ jobs:
         APK_PATH=$(find target/release/apk -name "*.apk" | head -n 1)
         
         # Find the build-tools directory (avoid wildcard expansion issues)
-        BUILD_TOOLS_DIR=$(find $ANDROID_HOME/build-tools -maxdepth 1 -mindepth 1 -type d | sort -V | tail -n 1)
+        BUILD_TOOLS_DIR=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -n 1)
         
         # Sign the APK using apksigner
-        $BUILD_TOOLS_DIR/apksigner sign \
+        "$BUILD_TOOLS_DIR/apksigner" sign \
           --ks release.jks \
           --ks-pass pass:$KEYSTORE_PASSWORD \
           --key-pass pass:$KEY_PASSWORD \
@@ -102,7 +102,7 @@ jobs:
           $APK_PATH
         
         # Verify the signature
-        $BUILD_TOOLS_DIR/apksigner verify target/release/apk/sword-spinner-signed.apk
+        "$BUILD_TOOLS_DIR/apksigner" verify target/release/apk/sword-spinner-signed.apk
         
         # Clean up keystore
         rm release.jks

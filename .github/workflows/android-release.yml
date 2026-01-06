@@ -100,7 +100,7 @@ jobs:
         echo "" >> release_notes.md
         echo "**Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> release_notes.md
         
-        # Set output for use in next step
+        # Display generated notes in workflow logs for verification
         cat release_notes.md
         
     - name: Create GitHub Release

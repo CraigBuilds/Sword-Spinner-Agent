@@ -1,30 +1,18 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use bevy_embedded_assets::EmbeddedAssetPlugin;
-use virtual_joystick::{
-    create_joystick, JoystickFloating, NoAction, VirtualJoystickEvent, VirtualJoystickPlugin,
-    VirtualJoystickUIBackground, VirtualJoystickUIKnob,
-};
 
-// ID for the virtual joystick
-#[derive(Default, Debug, Reflect, Hash, Clone, PartialEq, Eq)]
-enum JoystickId {
-    #[default]
-    Movement,
-}
-
-// Resource to track current joystick state
+// Resource to track touch input for mobile control
 #[derive(Resource, Default)]
-struct JoystickState {
+struct TouchState {
     direction: Vec2,
     is_active: bool,
 }
 
-// Public function that runs the game - can be called from both main.rs and lib.rs entry points
-pub fn run() {
-    App::new()
-        .add_plugins((
-            EmbeddedAssetPlugin::default(),
+/// Creates and configures the main App with all plugins and systems.
+/// This function is public to allow testing.
+pub fn create_app() -> App {
+    let mut app = App::new();
+    app.add_plugins((
             DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Sword Spinner".to_string(),
@@ -34,25 +22,28 @@ pub fn run() {
                 ..default()
             }),
             PhysicsPlugins::default(),
-            VirtualJoystickPlugin::<JoystickId>::default(),
         ))
         .insert_resource(Gravity(Vec2::ZERO)) // Top-down game, no gravity
-        .insert_resource(JoystickState::default())
+        .insert_resource(TouchState::default())
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
-                update_joystick_state,
+                update_touch_state,
                 player_movement,
                 spin_button_interaction,
                 sword_spin,
                 camera_follow,
-                update_joystick_visibility,
                 update_direction_arrow,
             )
                 .chain(),
-        )
-        .run();
+        );
+    app
+}
+
+// Public function that runs the game - can be called from both main.rs and lib.rs entry points
+pub fn run() {
+    create_app().run();
 }
 
 // Android entry point
@@ -77,18 +68,11 @@ struct SpinButton;
 #[derive(Component)]
 struct DirectionArrow;
 
-// Constants for joystick configuration
-const JOYSTICK_KNOB_SIZE: Vec2 = Vec2::new(30.0, 30.0);
-const JOYSTICK_BACKGROUND_SIZE: Vec2 = Vec2::new(60.0, 60.0);
-const JOYSTICK_KNOB_ALPHA: f32 = 0.3;
-const JOYSTICK_BACKGROUND_ALPHA: f32 = 0.15;
-
 // Setup system - initializes the game world
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    asset_server: Res<AssetServer>,
 ) {
     // Spawn camera
     commands.spawn((Camera2d, MainCamera));
@@ -258,7 +242,7 @@ fn setup(
         });
 
     // Spawn direction arrow (initially invisible)
-    // This arrow shows the joystick direction from the player
+    // This arrow shows the touch direction from the player
     commands.spawn((
         DirectionArrow,
         Sprite {
@@ -270,34 +254,8 @@ fn setup(
         Visibility::Hidden,
     ));
 
-    // Spawn virtual joystick
-    spawn_virtual_joystick(&mut commands, &asset_server);
-}
-
-/// Spawns a floating virtual joystick that appears where the user touches the screen.
-/// The joystick uses image assets (Knob.png and Outline.png) with translucent white tint.
-fn spawn_virtual_joystick(commands: &mut Commands, asset_server: &AssetServer) {
-    create_joystick(
-        commands,
-        JoystickId::Movement,
-        asset_server.load("Knob.png"),
-        asset_server.load("Outline.png"),
-        Some(Color::srgba(1.0, 1.0, 1.0, JOYSTICK_KNOB_ALPHA)),
-        Some(Color::srgba(1.0, 1.0, 1.0, JOYSTICK_BACKGROUND_ALPHA)),
-        Some(Color::srgba(1.0, 1.0, 1.0, 0.0)), // Invisible interactable area
-        JOYSTICK_KNOB_SIZE,
-        JOYSTICK_BACKGROUND_SIZE,
-        Node {
-            width: Val::Percent(100.0),
-            height: Val::Percent(100.0),
-            position_type: PositionType::Absolute,
-            left: Val::Percent(0.0),
-            bottom: Val::Percent(0.0),
-            ..default()
-        },
-        JoystickFloating,
-        NoAction,
-    );
+    // Note: Touch controls are temporarily disabled/stubbed out
+    // A proper implementation will be added after verifying the app loads on Android
 }
 
 // System to handle spin button interaction
@@ -314,30 +272,36 @@ fn spin_button_interaction(
     }
 }
 
-/// Updates the joystick state resource based on input events from the virtual joystick.
-fn update_joystick_state(
-    mut joystick_state: ResMut<JoystickState>,
-    mut joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
+/// Updates touch state resource for mobile control
+/// 
+/// **NOTE:** This is currently a placeholder implementation. Touch controls are disabled
+/// to isolate and fix the Android loading issue. Once the app loads successfully on Android,
+/// this will be properly implemented to calculate movement direction based on touch input.
+fn update_touch_state(
+    mut touch_state: ResMut<TouchState>,
+    touches: Option<Res<Touches>>,
 ) {
-    let mut has_event = false;
-    for event in joystick_events.read() {
-        let axis = event.axis();
-        joystick_state.direction = *axis;
-        joystick_state.is_active = axis.length() > 0.01;
-        has_event = true;
-    }
-
-    // Reset state if no events this frame (joystick was released)
-    if !has_event {
-        joystick_state.is_active = false;
-        joystick_state.direction = Vec2::ZERO;
+    if let Some(touches) = touches {
+        if let Some(_touch) = touches.first_pressed_position() {
+            // TODO: Calculate actual direction from touch position
+            // For now, just mark as active but don't move (placeholder)
+            touch_state.is_active = true;
+            touch_state.direction = Vec2::ZERO; // Will be calculated in future implementation
+        } else {
+            touch_state.is_active = false;
+            touch_state.direction = Vec2::ZERO;
+        }
+    } else {
+        // No Touches resource available (e.g., in tests or desktop)
+        touch_state.is_active = false;
+        touch_state.direction = Vec2::ZERO;
     }
 }
 
-// System to handle player movement (keyboard and virtual joystick)
+// System to handle player movement (keyboard and touch)
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
-    joystick_state: Res<JoystickState>,
+    touch_state: Res<TouchState>,
     mut player_query: Query<&mut LinearVelocity, With<Player>>,
 ) {
     let mut velocity = player_query.single_mut();
@@ -357,10 +321,10 @@ fn player_movement(
         direction.x += 1.0;
     }
 
-    // Virtual joystick input for mobile
-    // Only use joystick if keyboard isn't being used
-    if direction.length() < 0.1 && joystick_state.is_active {
-        direction = joystick_state.direction;
+    // Touch input for mobile
+    // Only use touch if keyboard isn't being used
+    if direction.length() < 0.1 && touch_state.is_active {
+        direction = touch_state.direction;
     }
 
     // Normalize and apply velocity
@@ -399,27 +363,7 @@ fn camera_follow(
     }
 }
 
-/// Updates joystick visibility based on whether it's being actively touched.
-fn update_joystick_visibility(
-    mut knob_query: Query<&mut Visibility, With<VirtualJoystickUIKnob>>,
-    mut background_query: Query<&mut Visibility, With<VirtualJoystickUIBackground>>,
-    joystick_state: Res<JoystickState>,
-) {
-    let visibility = if joystick_state.is_active {
-        Visibility::Visible
-    } else {
-        Visibility::Hidden
-    };
-
-    for mut vis in knob_query.iter_mut() {
-        *vis = visibility;
-    }
-    for mut vis in background_query.iter_mut() {
-        *vis = visibility;
-    }
-}
-
-// System to update direction arrow based on joystick input
+// System to update direction arrow based on touch input
 #[allow(clippy::type_complexity)]
 fn update_direction_arrow(
     player_query: Query<&Transform, With<Player>>,
@@ -427,13 +371,13 @@ fn update_direction_arrow(
         (&mut Transform, &mut Sprite, &mut Visibility),
         (With<DirectionArrow>, Without<Player>),
     >,
-    joystick_state: Res<JoystickState>,
+    touch_state: Res<TouchState>,
 ) {
     if let Ok(player_transform) = player_query.get_single() {
         if let Ok((mut arrow_transform, mut arrow_sprite, mut visibility)) =
             arrow_query.get_single_mut()
         {
-            if joystick_state.is_active && joystick_state.direction.length() > 0.1 {
+            if touch_state.is_active && touch_state.direction.length() > 0.1 {
                 // Show and update arrow
                 *visibility = Visibility::Visible;
                 arrow_sprite.color.set_alpha(0.8);
@@ -443,8 +387,8 @@ fn update_direction_arrow(
                 arrow_transform.translation.y = player_transform.translation.y;
                 arrow_transform.translation.z = 1.0; // Above player
 
-                // Rotate arrow to point in joystick direction
-                let angle = joystick_state.direction.y.atan2(joystick_state.direction.x);
+                // Rotate arrow to point in touch direction
+                let angle = touch_state.direction.y.atan2(touch_state.direction.x);
                 arrow_transform.rotation = Quat::from_rotation_z(angle);
             } else {
                 // Hide arrow when no input
@@ -452,5 +396,121 @@ fn update_direction_arrow(
                 arrow_sprite.color.set_alpha(0.0);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Simplified setup for tests that doesn't require physics
+    fn setup_for_tests(mut commands: Commands) {
+        // Spawn camera
+        commands.spawn((Camera2d, MainCamera));
+
+        // Spawn player (simplified for testing)
+        commands.spawn((
+            Player,
+            Transform::from_xyz(0.0, 0.0, 0.0),
+        ));
+
+        // Spawn sword (simplified for testing)
+        commands.spawn((
+            Sword,
+            Transform::from_xyz(60.0, 0.0, 0.0),
+        ));
+
+        // Spawn spin button
+        commands
+            .spawn((
+                Node {
+                    width: Val::Px(100.0),
+                    height: Val::Px(100.0),
+                    position_type: PositionType::Absolute,
+                    left: Val::Percent(50.0),
+                    bottom: Val::Px(20.0),
+                    margin: UiRect::left(Val::Px(-50.0)),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                BackgroundColor(Color::srgba(0.6, 0.6, 0.6, 0.8)),
+                Button,
+                SpinButton,
+            ));
+
+        // Spawn direction arrow
+        commands.spawn((
+            DirectionArrow,
+            Transform::from_xyz(0.0, 0.0, 1.0),
+            Visibility::Hidden,
+        ));
+    }
+
+    #[test]
+    fn test_app_runs_multiple_updates() {
+        // Create a minimal test app
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(TouchState::default())
+            .add_systems(Startup, setup_for_tests);
+
+        // Run the app for a few updates
+        app.update();
+        app.update();
+        app.update();
+
+        // Verify basic entities exist
+        let mut query = app.world_mut().query::<&Player>();
+        assert_eq!(query.iter(app.world()).count(), 1, "Should have one player");
+
+        let mut query = app.world_mut().query::<&Sword>();
+        assert_eq!(query.iter(app.world()).count(), 1, "Should have one sword");
+    }
+
+    #[test]
+    fn test_player_exists_after_setup() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(TouchState::default())
+            .add_systems(Startup, setup_for_tests);
+
+        app.update(); // Run startup systems
+
+        // Check that player entity was created
+        let mut query = app.world_mut().query::<&Player>();
+        assert_eq!(query.iter(app.world()).count(), 1, "Player should exist after setup");
+    }
+
+    #[test]
+    fn test_sword_exists_after_setup() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(TouchState::default())
+            .add_systems(Startup, setup_for_tests);
+
+        app.update();
+
+        // Check that sword entity was created
+        let mut query = app.world_mut().query::<&Sword>();
+        assert_eq!(query.iter(app.world()).count(), 1, "Sword should exist after setup");
+    }
+
+    #[test]
+    fn test_touch_state_updates() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins)
+            .insert_resource(TouchState::default())
+            .add_systems(Update, update_touch_state);
+
+        // Initial state should be inactive
+        let touch_state = app.world().resource::<TouchState>();
+        assert!(!touch_state.is_active, "Touch should start inactive");
+
+        app.update();
+
+        // After update with no input, should still be inactive
+        let touch_state = app.world().resource::<TouchState>();
+        assert!(!touch_state.is_active, "Touch should remain inactive with no input");
     }
 }

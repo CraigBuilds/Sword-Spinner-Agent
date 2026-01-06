@@ -87,13 +87,29 @@ jobs:
         name: sword-spinner-signed
         path: ${{ steps.find-apk.outputs.apk_path }}
 
+    - name: Generate release notes
+      id: release-notes
+      run: |
+        echo "## Latest Changes" > release_notes.md
+        echo "" >> release_notes.md
+        
+        # Get the last 10 commits with their messages
+        git log -10 --pretty=format:"* %s (%h)" >> release_notes.md
+        
+        echo "" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "**Build Date:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> release_notes.md
+        
+        # Set output for use in next step
+        cat release_notes.md
+        
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
         tag_name: Latest
         name: Latest Release
         files: ${{ steps.find-apk.outputs.apk_path }}
-        generate_release_notes: true
+        body_path: release_notes.md
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

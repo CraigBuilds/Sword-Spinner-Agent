@@ -32,7 +32,6 @@ fn main() {
                 player_movement,
                 spin_button_interaction,
                 sword_spin,
-                momentum_sword_spin,
                 camera_follow,
             )
                 .chain(),
@@ -62,11 +61,10 @@ fn setup(mut commands: Commands) {
     let player_entity = commands
         .spawn((
             Player,
-            Sprite {
-                color: Color::srgb(0.2, 0.4, 0.8),
-                custom_size: Some(Vec2::new(40.0, 40.0)),
-                ..default()
-            },
+            Sprite::from_color(
+                Color::srgb(0.2, 0.4, 0.8),
+                Vec2::splat(40.0), // Circle sprite
+            ),
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
             Collider::circle(20.0), // Circle collider instead of rectangle
@@ -303,31 +301,6 @@ fn sword_spin(
         if let Ok(mut angular_velocity) = sword_query.get_single_mut() {
             angular_velocity.0 += 30.0; // Bigger impulse (15.0 -> 30.0)
         }
-    }
-}
-
-// System to add momentum-based sword spinning when player moves in circles
-// This makes the sword naturally spin more when the player moves in circular patterns
-fn momentum_sword_spin(
-    player_query: Query<(&Transform, &LinearVelocity), With<Player>>,
-    mut sword_query: Query<(&Transform, &mut AngularVelocity), With<Sword>>,
-    time: Res<Time>,
-) {
-    if let (Ok((player_transform, player_velocity)), Ok((sword_transform, mut sword_angular_velocity))) = 
-        (player_query.get_single(), sword_query.get_single_mut()) {
-        
-        // Calculate the perpendicular component of velocity relative to sword position
-        // This creates torque when moving in circles
-        let sword_offset = sword_transform.translation.truncate() - player_transform.translation.truncate();
-        let velocity = player_velocity.0;
-        
-        // Cross product gives us the rotational contribution
-        // Perpendicular velocity creates spinning momentum
-        let cross = sword_offset.x * velocity.y - sword_offset.y * velocity.x;
-        
-        // Apply momentum-based angular acceleration (scaled down for smooth gameplay)
-        let momentum_factor = 0.05; // Tuned for fun natural spinning
-        sword_angular_velocity.0 += cross * momentum_factor * time.delta_secs();
     }
 }
 

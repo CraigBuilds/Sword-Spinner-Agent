@@ -95,16 +95,14 @@ For detailed Android setup instructions, see [SETUP.md](SETUP.md).
 
 The project includes a GitHub Actions workflow that automatically:
 - Builds release APKs for Android (aarch64)
-- Signs APKs when pushing version tags (v*)
-- Creates GitHub releases with signed APK attachments
-- Uploads unsigned APKs for test builds
+- Creates GitHub releases with APK attachments
+- Uploads APKs for distribution
 
 ### Releasing
 
-1. Generate a signing keystore (see [SETUP.md](SETUP.md))
-2. Configure GitHub secrets for signing
-3. Tag a version: `git tag v0.1.0 && git push origin v0.1.0`
-4. Workflow automatically builds, signs, and releases the APK
+The workflow can be triggered manually from the Actions tab:
+1. Go to: Actions → Android Release → Run workflow
+2. The workflow automatically builds and releases the unsigned APK
 
 ## Technical Details
 

@@ -9,6 +9,13 @@ enum JoystickId {
     Movement,
 }
 
+// Resource to track current joystick state
+#[derive(Resource, Default)]
+struct JoystickState {
+    direction: Vec2,
+    is_active: bool,
+}
+
 // Public function that runs the game - can be called from both main.rs and lib.rs entry points
 pub fn run() {
     App::new()
@@ -25,14 +32,18 @@ pub fn run() {
             VirtualJoystickPlugin::<JoystickId>::default(),
         ))
         .insert_resource(Gravity(Vec2::ZERO)) // Top-down game, no gravity
+        .insert_resource(JoystickState::default())
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
+                update_joystick_state,
                 player_movement,
                 spin_button_interaction,
                 sword_spin,
                 camera_follow,
+                update_joystick_visibility,
+                update_direction_arrow,
             )
                 .chain(),
         )
@@ -58,11 +69,15 @@ struct MainCamera;
 #[derive(Component)]
 struct SpinButton;
 
+#[derive(Component)]
+struct DirectionArrow;
+
 // Setup system - initializes the game world
 fn setup(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     // Spawn camera
     commands.spawn((Camera2d, MainCamera));
@@ -203,16 +218,17 @@ fn setup(
     }
 
     // Spawn virtual joystick (floating type that appears where touched)
+    // Much smaller and faint translucent white with circular image assets
     create_joystick(
         &mut commands,
         JoystickId::Movement,
-        Handle::default(),                      // No knob image
-        Handle::default(),                      // No background image
-        Some(Color::srgba(0.2, 0.4, 0.8, 0.8)), // Knob color (blue to match player)
-        Some(Color::srgba(0.3, 0.3, 0.3, 0.5)), // Background color (semi-transparent gray)
-        Some(Color::srgba(0.1, 0.1, 0.1, 0.3)), // Interactable area color
-        Vec2::new(75.0, 75.0),                  // Knob size
-        Vec2::new(150.0, 150.0),                // Background size
+        asset_server.load("Knob.png"),          // Knob image (circular)
+        asset_server.load("Outline.png"),       // Background image (circular)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.3)), // Knob color (faint white tint)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.15)), // Background color (very faint white tint)
+        Some(Color::srgba(1.0, 1.0, 1.0, 0.0)), // Interactable area color (invisible)
+        Vec2::new(30.0, 30.0),                  // Knob size (much smaller: 75 -> 30)
+        Vec2::new(60.0, 60.0),                  // Background size (much smaller: 150 -> 60)
         Node {
             width: Val::Percent(100.0), // Whole screen
             height: Val::Percent(100.0),
@@ -253,6 +269,19 @@ fn setup(
                 TextColor(Color::srgb(0.1, 0.1, 0.1)),
             ));
         });
+
+    // Spawn direction arrow (initially invisible)
+    // This arrow shows the joystick direction from the player
+    commands.spawn((
+        DirectionArrow,
+        Sprite {
+            color: Color::srgba(1.0, 0.0, 0.0, 0.0), // Red but initially invisible
+            custom_size: Some(Vec2::new(30.0, 6.0)), // Small arrow shape
+            ..default()
+        },
+        Transform::from_xyz(0.0, 0.0, 1.0), // Above player
+        Visibility::Hidden,
+    ));
 }
 
 // System to handle spin button interaction
@@ -269,11 +298,32 @@ fn spin_button_interaction(
     }
 }
 
+// System to update joystick state from events
+fn update_joystick_state(
+    mut joystick_state: ResMut<JoystickState>,
+    mut joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
+) {
+    let mut has_event = false;
+
+    for event in joystick_events.read() {
+        let axis = event.axis();
+        joystick_state.direction = *axis;
+        joystick_state.is_active = axis.length() > 0.01;
+        has_event = true;
+    }
+
+    // If no events this frame, mark as inactive
+    if !has_event {
+        joystick_state.is_active = false;
+        joystick_state.direction = Vec2::ZERO;
+    }
+}
+
 // System to handle player movement (keyboard and virtual joystick)
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
+    joystick_state: Res<JoystickState>,
     mut player_query: Query<&mut LinearVelocity, With<Player>>,
-    mut joystick: EventReader<VirtualJoystickEvent<JoystickId>>,
 ) {
     let mut velocity = player_query.single_mut();
     let mut direction = Vec2::ZERO;
@@ -293,12 +343,9 @@ fn player_movement(
     }
 
     // Virtual joystick input for mobile
-    for event in joystick.read() {
-        let axis = event.axis();
-        // Only use joystick if keyboard isn't being used
-        if direction.length() < 0.1 {
-            direction = *axis;
-        }
+    // Only use joystick if keyboard isn't being used
+    if direction.length() < 0.1 && joystick_state.is_active {
+        direction = joystick_state.direction;
     }
 
     // Normalize and apply velocity
@@ -333,6 +380,70 @@ fn camera_follow(
         if let Ok(mut camera_transform) = camera_query.get_single_mut() {
             camera_transform.translation.x = player_transform.translation.x;
             camera_transform.translation.y = player_transform.translation.y;
+        }
+    }
+}
+
+// System to update joystick visibility based on touch/interaction
+fn update_joystick_visibility(
+    joystick_query: Query<&Children, With<VirtualJoystickNode<JoystickId>>>,
+    mut bg_color_query: Query<&mut BackgroundColor>,
+    joystick_state: Res<JoystickState>,
+) {
+    // Make joystick invisible when not being touched
+    // Update all child nodes (knob and background) to ensure complete invisibility
+    for children in joystick_query.iter() {
+        for &child in children.iter() {
+            if let Ok(mut bg_color) = bg_color_query.get_mut(child) {
+                if joystick_state.is_active {
+                    // Make visible when touched - restore alpha if it was set to 0
+                    let current_alpha = bg_color.0.alpha();
+                    if current_alpha < 0.01 {
+                        // Restore to a faint white alpha for all joystick children
+                        // This is a simple approach - all children are restored to the same faint alpha
+                        bg_color.0.set_alpha(0.15);
+                    }
+                } else {
+                    // Make invisible when not touched
+                    bg_color.0.set_alpha(0.0);
+                }
+            }
+        }
+    }
+}
+
+// System to update direction arrow based on joystick input
+#[allow(clippy::type_complexity)]
+fn update_direction_arrow(
+    player_query: Query<&Transform, With<Player>>,
+    mut arrow_query: Query<
+        (&mut Transform, &mut Sprite, &mut Visibility),
+        (With<DirectionArrow>, Without<Player>),
+    >,
+    joystick_state: Res<JoystickState>,
+) {
+    if let Ok(player_transform) = player_query.get_single() {
+        if let Ok((mut arrow_transform, mut arrow_sprite, mut visibility)) =
+            arrow_query.get_single_mut()
+        {
+            if joystick_state.is_active && joystick_state.direction.length() > 0.1 {
+                // Show and update arrow
+                *visibility = Visibility::Visible;
+                arrow_sprite.color.set_alpha(0.8);
+
+                // Position arrow at player position
+                arrow_transform.translation.x = player_transform.translation.x;
+                arrow_transform.translation.y = player_transform.translation.y;
+                arrow_transform.translation.z = 1.0; // Above player
+
+                // Rotate arrow to point in joystick direction
+                let angle = joystick_state.direction.y.atan2(joystick_state.direction.x);
+                arrow_transform.rotation = Quat::from_rotation_z(angle);
+            } else {
+                // Hide arrow when no input
+                *visibility = Visibility::Hidden;
+                arrow_sprite.color.set_alpha(0.0);
+            }
         }
     }
 }

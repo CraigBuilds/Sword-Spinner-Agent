@@ -60,13 +60,15 @@ fn setup(mut commands: Commands) {
     let player_entity = commands
         .spawn((
             Player,
-            Sprite::from_color(
-                Color::srgb(0.2, 0.4, 0.8),
-                Vec2::splat(40.0), // Circle sprite
-            ),
+            Sprite {
+                color: Color::srgb(0.2, 0.4, 0.8),
+                custom_size: Some(Vec2::new(40.0, 40.0)),
+                ..default()
+            },
             Transform::from_xyz(0.0, 0.0, 0.0),
             RigidBody::Dynamic,
-            Collider::circle(20.0), // Circle collider instead of rectangle
+            Collider::circle(20.0), // Circle collider
+            CollisionLayers::new([LayerMask(0b0001)], [LayerMask(0b0110)]), // Collides with walls and obstacles, not sword
             LockedAxes::ROTATION_LOCKED,
             LinearVelocity::default(),
             LinearDamping(2.0),
@@ -86,6 +88,7 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(60.0, 0.0, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(90.0, 10.0), // Longer sword collider
+            CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b0110)]), // Collides with walls and obstacles, not player
             AngularVelocity::default(),
             LinearVelocity::default(),
             LinearDamping(0.5), // Reduced damping (1.0 -> 0.5)
@@ -118,6 +121,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
     ));
 
     // Bottom wall
@@ -130,6 +134,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(0.0, -arena_height / 2.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(arena_width, wall_thickness),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
     ));
 
     // Left wall
@@ -142,6 +147,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(-arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
     ));
 
     // Right wall
@@ -154,6 +160,7 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(arena_width / 2.0, 0.0, 0.0),
         RigidBody::Static,
         Collider::rectangle(wall_thickness, arena_height),
+        CollisionLayers::new([LayerMask(0b0100)], [LayerMask(0b0111)]), // Layer 2: walls
     ));
 
     // Spawn some dynamic obstacles
@@ -175,6 +182,7 @@ fn setup(mut commands: Commands) {
             Transform::from_xyz(pos.x, pos.y, 0.0),
             RigidBody::Dynamic,
             Collider::rectangle(30.0, 30.0),
+            CollisionLayers::new([LayerMask(0b1000)], [LayerMask(0b0111)]), // Layer 3: obstacles
             LinearDamping(0.3), // Less damping for more impact
             AngularDamping(0.5), // Less damping for more impact
             Mass(0.8), // Lighter obstacles for more dramatic impacts

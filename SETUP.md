@@ -58,7 +58,50 @@ cargo run --release
 
 ### Development Tips
 
-- Use `cargo check` for fast syntax checking
+**Code Quality Workflow (REQUIRED for all changes):**
+
+Before committing any code, always run these commands in order:
+
+1. **Check compilation**: Fast syntax and type checking
+   ```bash
+   cargo check --all-targets
+   ```
+
+2. **Run linter**: Catch common mistakes and improve code quality
+   ```bash
+   cargo clippy --all-targets -- -D warnings
+   ```
+   This treats all clippy warnings as errors. Fix any issues before proceeding.
+
+3. **Format code**: Ensure consistent code style
+   ```bash
+   cargo fmt
+   ```
+
+4. **Run tests**: Verify functionality
+   ```bash
+   cargo test --lib
+   ```
+
+5. **Build successfully**: Confirm everything compiles
+   ```bash
+   cargo build
+   ```
+
+**Quick Check Command:**
+Run all checks at once with:
+```bash
+cargo check --all-targets && cargo clippy --all-targets -- -D warnings && cargo fmt --check && cargo test --lib
+```
+
+**For AI Agents:**
+- These checks are MANDATORY before any code submission
+- The CI pipeline will fail if any of these checks fail
+- See `.github/PULL_REQUEST_TEMPLATE.md` for the complete checklist
+- Configuration files `clippy.toml` and `rustfmt.toml` define project standards
+
+**Additional Tips:**
+- Use `cargo check` for fast syntax checking during development
 - Use `cargo clippy` for linting
 - Use `cargo fmt` for code formatting
 - Enable dynamic linking for faster iteration:

@@ -163,6 +163,46 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+### For AI Agents and Contributors
+
+**Before submitting any code changes, you MUST:**
+
+1. **Run cargo check**: Ensures code compiles without errors
+   ```bash
+   cargo check --all-targets
+   ```
+
+2. **Run cargo clippy**: Catches common mistakes and non-idiomatic code
+   ```bash
+   cargo clippy --all-targets -- -D warnings
+   ```
+
+3. **Format code with rustfmt**: Ensures consistent code style
+   ```bash
+   cargo fmt
+   ```
+
+4. **Run tests**: Verify functionality works as expected
+   ```bash
+   cargo test --lib
+   ```
+
+5. **Build the project**: Confirm it compiles successfully
+   ```bash
+   cargo build
+   ```
+
+**Additional Guidelines:**
+- Follow existing code patterns and conventions in the codebase
+- Add comments for complex logic
+- Update documentation (README.md, SETUP.md) if adding features
+- Test Android builds if making platform-specific changes: `cargo apk build --lib`
+- Don't introduce new compiler warnings
+- Avoid adding unnecessary dependencies
+- Review the PR template checklist before submitting
+
+These checks are automatically run in CI, but running them locally first saves time and ensures code quality.
+
 ## Acknowledgments
 
 - Built with [Bevy](https://bevyengine.org/) game engine

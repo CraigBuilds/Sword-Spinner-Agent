@@ -1,0 +1,13 @@
+# Clippy Configuration
+# This file configures Rust's clippy linter for the Sword Spinner project
+
+# Warn on all clippy lints by default
+# Use: cargo clippy -- -D warnings (to treat warnings as errors)
+
+# Enable pedantic lints for better code quality
+# These catch common mistakes and non-idiomatic code
+warn-on-all-wildcard-imports = true
+
+# Complexity - warn about overly complex code
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250

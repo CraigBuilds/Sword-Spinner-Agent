@@ -73,12 +73,12 @@ impl Default for TouchState {
 impl TouchState {
     fn register_tap(&mut self, position: Vec2) {
         let now = Instant::now();
-        
+
         // Check if this is a double-tap
         if let (Some(last_time), Some(last_pos)) = (self.last_tap_time, self.last_tap_position) {
             let time_diff = now.duration_since(last_time);
             let distance = position.distance(last_pos);
-            
+
             if time_diff <= self.double_tap_window && distance <= self.tap_distance_threshold {
                 self.double_tap_detected = true;
                 // Reset to prevent triple-tap
@@ -87,11 +87,11 @@ impl TouchState {
                 return;
             }
         }
-        
+
         self.last_tap_time = Some(now);
         self.last_tap_position = Some(position);
     }
-    
+
     fn consume_double_tap(&mut self) -> bool {
         let detected = self.double_tap_detected;
         self.double_tap_detected = false;
@@ -242,18 +242,16 @@ fn detect_double_tap(
     for touch in touch_events.read() {
         if touch.phase == bevy::input::touch::TouchPhase::Started {
             // Convert touch position to world coordinates
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
-            {
+            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position) {
                 touch_state.touch_start_position = Some(world_pos);
                 touch_state.current_touch_position = Some(world_pos);
                 touch_state.is_dragging = false;
             }
         } else if touch.phase == bevy::input::touch::TouchPhase::Moved {
             // Update current touch position for movement
-            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
-            {
+            if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position) {
                 touch_state.current_touch_position = Some(world_pos);
-                
+
                 // Check if this is a drag (moved more than threshold)
                 if let Some(start_pos) = touch_state.touch_start_position {
                     let distance = world_pos.distance(start_pos);
@@ -266,8 +264,7 @@ fn detect_double_tap(
         } else if touch.phase == bevy::input::touch::TouchPhase::Ended {
             // Only register tap if it wasn't a drag
             if !touch_state.is_dragging {
-                if let Ok(world_pos) =
-                    camera.viewport_to_world_2d(camera_transform, touch.position)
+                if let Ok(world_pos) = camera.viewport_to_world_2d(camera_transform, touch.position)
                 {
                     touch_state.register_tap(world_pos);
                 }
@@ -307,7 +304,7 @@ fn player_movement(
         if let Some(world_pos) = touch_state.current_touch_position {
             // Calculate direction from player to touch position
             let target_direction = world_pos - player_transform.translation.truncate();
-            
+
             // Only move if touch is reasonably far from player
             if target_direction.length() > 20.0 {
                 direction = target_direction;

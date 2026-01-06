@@ -1,0 +1,18 @@
+# Rust formatting configuration
+# Run with: cargo fmt
+
+# Edition
+edition = "2021"
+
+# Line width
+max_width = 100
+
+# Indentation
+tab_spaces = 4
+hard_tabs = false
+
+# Use field init shorthand if possible
+use_field_init_shorthand = true
+
+# Newlines
+newline_style = "Unix"

@@ -31,6 +31,8 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Add Android targets
         run: rustup target add aarch64-linux-android
@@ -74,6 +76,15 @@ jobs:
           else
             echo "Warning: android-34 platform not found in $ANDROID_HOME/platforms"
           fi
+
+      - name: Run cargo check
+        run: cargo check --lib
+
+      - name: Run cargo clippy
+        run: cargo clippy --lib -- -D warnings
+
+      - name: Check code formatting
+        run: cargo fmt --check
 
       - name: Run tests
         run: cargo test --lib

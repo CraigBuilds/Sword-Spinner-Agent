@@ -6,7 +6,7 @@ license = "MIT"
 description = "A top-down arcade game with physics-based sword spinning"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 name = "sword_spinner"
 path = "src/lib.rs"
 

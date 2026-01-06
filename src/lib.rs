@@ -9,8 +9,8 @@ enum JoystickId {
     Movement,
 }
 
-#[bevy_main]
-fn main() {
+// Public function that runs the game - can be called from both main.rs and lib.rs entry points
+pub fn run() {
     App::new()
         .add_plugins((
             DefaultPlugins.set(WindowPlugin {
@@ -37,6 +37,12 @@ fn main() {
                 .chain(),
         )
         .run();
+}
+
+// Android entry point
+#[bevy_main]
+fn main() {
+    run();
 }
 
 // Component markers
@@ -98,7 +104,7 @@ fn setup(
             CollisionLayers::new([LayerMask(0b0010)], [LayerMask(0b1100)]), // Layer 1: collides with walls (bit 2) and obstacles (bit 3), NOT player (bit 0)
             AngularVelocity::default(),
             LinearVelocity::default(),
-            LinearDamping(0.5), // Reduced damping (1.0 -> 0.5)
+            LinearDamping(0.5),  // Reduced damping (1.0 -> 0.5)
             AngularDamping(0.5), // Reduced damping (2.0 -> 0.5)
             Mass(0.5),
         ))
@@ -190,9 +196,9 @@ fn setup(
             RigidBody::Dynamic,
             Collider::rectangle(30.0, 30.0),
             CollisionLayers::new([LayerMask(0b1000)], [LayerMask(0b0111)]), // Layer 3: obstacles - collide with player, sword, and walls
-            LinearDamping(0.3), // Less damping for more impact
+            LinearDamping(0.3),  // Less damping for more impact
             AngularDamping(0.5), // Less damping for more impact
-            Mass(0.8), // Lighter obstacles for more dramatic impacts
+            Mass(0.8),           // Lighter obstacles for more dramatic impacts
         ));
     }
 
@@ -200,15 +206,15 @@ fn setup(
     create_joystick(
         &mut commands,
         JoystickId::Movement,
-        Handle::default(), // No knob image
-        Handle::default(), // No background image
+        Handle::default(),                      // No knob image
+        Handle::default(),                      // No background image
         Some(Color::srgba(0.2, 0.4, 0.8, 0.8)), // Knob color (blue to match player)
         Some(Color::srgba(0.3, 0.3, 0.3, 0.5)), // Background color (semi-transparent gray)
         Some(Color::srgba(0.1, 0.1, 0.1, 0.3)), // Interactable area color
-        Vec2::new(75.0, 75.0),           // Knob size
-        Vec2::new(150.0, 150.0),         // Background size
+        Vec2::new(75.0, 75.0),                  // Knob size
+        Vec2::new(150.0, 150.0),                // Background size
         Node {
-            width: Val::Percent(100.0),  // Whole screen
+            width: Val::Percent(100.0), // Whole screen
             height: Val::Percent(100.0),
             position_type: PositionType::Absolute,
             left: Val::Percent(0.0),

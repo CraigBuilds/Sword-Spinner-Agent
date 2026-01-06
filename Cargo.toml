@@ -19,6 +19,7 @@ bevy = { version = "0.15", default-features = false, features = [
     "bevy_winit",
     "bevy_state",
     "bevy_color",
+    "bevy_ui",
     "multi_threaded",
 ] }
 avian2d = "0.2"

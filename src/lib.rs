@@ -9,6 +9,13 @@ enum JoystickId {
     Movement,
 }
 
+// Resource to track current joystick state
+#[derive(Resource, Default)]
+struct JoystickState {
+    direction: Vec2,
+    is_active: bool,
+}
+
 // Public function that runs the game - can be called from both main.rs and lib.rs entry points
 pub fn run() {
     App::new()
@@ -25,10 +32,12 @@ pub fn run() {
             VirtualJoystickPlugin::<JoystickId>::default(),
         ))
         .insert_resource(Gravity(Vec2::ZERO)) // Top-down game, no gravity
+        .insert_resource(JoystickState::default())
         .add_systems(Startup, setup)
         .add_systems(
             Update,
             (
+                update_joystick_state,
                 player_movement,
                 spin_button_interaction,
                 sword_spin,
@@ -288,11 +297,32 @@ fn spin_button_interaction(
     }
 }
 
+// System to update joystick state from events
+fn update_joystick_state(
+    mut joystick_state: ResMut<JoystickState>,
+    mut joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
+) {
+    let mut has_event = false;
+
+    for event in joystick_events.read() {
+        let axis = event.axis();
+        joystick_state.direction = *axis;
+        joystick_state.is_active = axis.length() > 0.01;
+        has_event = true;
+    }
+
+    // If no events this frame, mark as inactive
+    if !has_event {
+        joystick_state.is_active = false;
+        joystick_state.direction = Vec2::ZERO;
+    }
+}
+
 // System to handle player movement (keyboard and virtual joystick)
 fn player_movement(
     keyboard: Res<ButtonInput<KeyCode>>,
+    joystick_state: Res<JoystickState>,
     mut player_query: Query<&mut LinearVelocity, With<Player>>,
-    mut joystick: EventReader<VirtualJoystickEvent<JoystickId>>,
 ) {
     let mut velocity = player_query.single_mut();
     let mut direction = Vec2::ZERO;
@@ -312,12 +342,9 @@ fn player_movement(
     }
 
     // Virtual joystick input for mobile
-    for event in joystick.read() {
-        let axis = event.axis();
-        // Only use joystick if keyboard isn't being used
-        if direction.length() < 0.1 {
-            direction = *axis;
-        }
+    // Only use joystick if keyboard isn't being used
+    if direction.length() < 0.1 && joystick_state.is_active {
+        direction = joystick_state.direction;
     }
 
     // Normalize and apply velocity
@@ -359,15 +386,13 @@ fn camera_follow(
 // System to update joystick visibility based on touch/interaction
 fn update_joystick_visibility(
     mut joystick_query: Query<&mut BackgroundColor, With<VirtualJoystickNode<JoystickId>>>,
-    joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
+    joystick_state: Res<JoystickState>,
 ) {
     // Make joystick invisible when not being touched
     // The floating joystick automatically appears/disappears, but we want to make it completely invisible
     // when not in use by setting opacity to 0
-    let is_active = !joystick_events.is_empty();
-
     for mut bg_color in joystick_query.iter_mut() {
-        if is_active {
+        if joystick_state.is_active {
             // Make visible when touched (restore original faint white colors)
             if bg_color.0.alpha() < 0.1 {
                 bg_color.0.set_alpha(0.15);
@@ -387,25 +412,13 @@ fn update_direction_arrow(
         (&mut Transform, &mut Sprite, &mut Visibility),
         (With<DirectionArrow>, Without<Player>),
     >,
-    mut joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
+    joystick_state: Res<JoystickState>,
 ) {
     if let Ok(player_transform) = player_query.get_single() {
         if let Ok((mut arrow_transform, mut arrow_sprite, mut visibility)) =
             arrow_query.get_single_mut()
         {
-            let mut has_input = false;
-            let mut direction = Vec2::ZERO;
-
-            // Get the latest joystick direction
-            for event in joystick_events.read() {
-                let axis = event.axis();
-                if axis.length() > 0.1 {
-                    direction = *axis;
-                    has_input = true;
-                }
-            }
-
-            if has_input {
+            if joystick_state.is_active && joystick_state.direction.length() > 0.1 {
                 // Show and update arrow
                 *visibility = Visibility::Visible;
                 arrow_sprite.color.set_alpha(0.8);
@@ -416,7 +429,7 @@ fn update_direction_arrow(
                 arrow_transform.translation.z = 1.0; // Above player
 
                 // Rotate arrow to point in joystick direction
-                let angle = direction.y.atan2(direction.x);
+                let angle = joystick_state.direction.y.atan2(joystick_state.direction.x);
                 arrow_transform.rotation = Quat::from_rotation_z(angle);
             } else {
                 // Hide arrow when no input

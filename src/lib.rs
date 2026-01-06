@@ -1,8 +1,8 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use virtual_joystick::{
-    create_joystick, JoystickFloating, NoAction, VirtualJoystickEvent, VirtualJoystickNode,
-    VirtualJoystickPlugin, VirtualJoystickUIBackground, VirtualJoystickUIKnob,
+    create_joystick, JoystickFloating, NoAction, VirtualJoystickEvent, VirtualJoystickPlugin,
+    VirtualJoystickUIBackground, VirtualJoystickUIKnob,
 };
 
 // ID for the virtual joystick
@@ -313,20 +313,23 @@ fn spin_button_interaction(
 }
 
 /// Updates the joystick state resource based on input events from the virtual joystick.
-/// Sets the direction and active status based on whether the joystick is being used.
 fn update_joystick_state(
     mut joystick_state: ResMut<JoystickState>,
     mut joystick_events: EventReader<VirtualJoystickEvent<JoystickId>>,
 ) {
-    // Process the last joystick event (if any)
-    if let Some(event) = joystick_events.read().last() {
+    let mut has_event = false;
+    for event in joystick_events.read() {
         let axis = event.axis();
         joystick_state.direction = *axis;
         joystick_state.is_active = axis.length() > 0.01;
+        has_event = true;
     }
-    // Note: When no events occur, the state remains unchanged from the previous frame.
-    // The joystick library sends events even when released (with zero axis), so we don't
-    // need explicit handling for the "no events" case.
+
+    // Reset state if no events this frame (joystick was released)
+    if !has_event {
+        joystick_state.is_active = false;
+        joystick_state.direction = Vec2::ZERO;
+    }
 }
 
 // System to handle player movement (keyboard and virtual joystick)
@@ -395,48 +398,22 @@ fn camera_follow(
 }
 
 /// Updates joystick visibility based on whether it's being actively touched.
-/// When not in use, the joystick becomes completely transparent (alpha = 0).
-/// When touched, it restores the knob and background to their configured alpha values.
 fn update_joystick_visibility(
-    joystick_query: Query<&Children, With<VirtualJoystickNode<JoystickId>>>,
-    mut knob_query: Query<
-        &mut BackgroundColor,
-        (
-            With<VirtualJoystickUIKnob>,
-            Without<VirtualJoystickUIBackground>,
-        ),
-    >,
-    mut background_query: Query<
-        &mut BackgroundColor,
-        (
-            With<VirtualJoystickUIBackground>,
-            Without<VirtualJoystickUIKnob>,
-        ),
-    >,
+    mut knob_query: Query<&mut Visibility, With<VirtualJoystickUIKnob>>,
+    mut background_query: Query<&mut Visibility, With<VirtualJoystickUIBackground>>,
     joystick_state: Res<JoystickState>,
 ) {
-    for children in joystick_query.iter() {
-        for &child in children.iter() {
-            // Handle knob component
-            if let Ok(mut bg_color) = knob_query.get_mut(child) {
-                let target_alpha = if joystick_state.is_active {
-                    JOYSTICK_KNOB_ALPHA
-                } else {
-                    0.0
-                };
-                bg_color.0.set_alpha(target_alpha);
-            }
+    let visibility = if joystick_state.is_active {
+        Visibility::Visible
+    } else {
+        Visibility::Hidden
+    };
 
-            // Handle background component
-            if let Ok(mut bg_color) = background_query.get_mut(child) {
-                let target_alpha = if joystick_state.is_active {
-                    JOYSTICK_BACKGROUND_ALPHA
-                } else {
-                    0.0
-                };
-                bg_color.0.set_alpha(target_alpha);
-            }
-        }
+    for mut vis in knob_query.iter_mut() {
+        *vis = visibility;
+    }
+    for mut vis in background_query.iter_mut() {
+        *vis = visibility;
     }
 }
 
